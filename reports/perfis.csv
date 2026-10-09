@@ -1,0 +1,5 @@
+perfil,municipios,taxa_atual,participacao,esforco_exigido,pct_falhou_2024,nome
+0,1522,42.21,91.79,5.69,0.38,"baixo desempenho, alta participação"
+1,593,92.3,93.79,-11.73,0.36,"alto desempenho, alta participação"
+2,1097,49.54,80.81,4.83,0.59,"baixo desempenho, baixa participação"
+3,2020,70.86,92.05,1.44,0.49,"desempenho médio, alta participação"
