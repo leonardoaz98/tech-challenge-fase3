@@ -1,0 +1,299 @@
+{
+  "coeficientes": [
+    {
+      "variavel": "UF CE",
+      "coef": -2.217,
+      "razao_chances": 0.109
+    },
+    {
+      "variavel": "UF GO",
+      "coef": -1.261,
+      "razao_chances": 0.283
+    },
+    {
+      "variavel": "UF SC",
+      "coef": -0.954,
+      "razao_chances": 0.385
+    },
+    {
+      "variavel": "UF ES",
+      "coef": -0.863,
+      "razao_chances": 0.422
+    },
+    {
+      "variavel": "UF PE",
+      "coef": -0.767,
+      "razao_chances": 0.465
+    },
+    {
+      "variavel": "UF MG",
+      "coef": -0.755,
+      "razao_chances": 0.47
+    },
+    {
+      "variavel": "media_portugues",
+      "coef": -0.67,
+      "razao_chances": 0.512
+    },
+    {
+      "variavel": "UF PR",
+      "coef": -0.645,
+      "razao_chances": 0.524
+    },
+    {
+      "variavel": "região Centro-Oeste",
+      "coef": -0.616,
+      "razao_chances": 0.54
+    },
+    {
+      "variavel": "UF RO",
+      "coef": -0.596,
+      "razao_chances": 0.551
+    },
+    {
+      "variavel": "região Sudeste",
+      "coef": -0.558,
+      "razao_chances": 0.572
+    },
+    {
+      "variavel": "participacao",
+      "coef": -0.315,
+      "razao_chances": 0.729
+    },
+    {
+      "variavel": "UF MA",
+      "coef": -0.314,
+      "razao_chances": 0.731
+    },
+    {
+      "variavel": "log_pib_per_capita",
+      "coef": -0.163,
+      "razao_chances": 0.849
+    },
+    {
+      "variavel": "porte metropole",
+      "coef": -0.119,
+      "razao_chances": 0.888
+    },
+    {
+      "variavel": "porte pequeno_II",
+      "coef": -0.1,
+      "razao_chances": 0.905
+    },
+    {
+      "variavel": "UF PI",
+      "coef": -0.064,
+      "razao_chances": 0.938
+    },
+    {
+      "variavel": "porte pequeno_I",
+      "coef": -0.044,
+      "razao_chances": 0.957
+    },
+    {
+      "variavel": "UF PA",
+      "coef": -0.027,
+      "razao_chances": 0.973
+    },
+    {
+      "variavel": "UF PB",
+      "coef": 0.03,
+      "razao_chances": 1.031
+    },
+    {
+      "variavel": "porte grande",
+      "coef": 0.062,
+      "razao_chances": 1.064
+    },
+    {
+      "variavel": "porte medio",
+      "coef": 0.141,
+      "razao_chances": 1.151
+    },
+    {
+      "variavel": "região Sul",
+      "coef": 0.141,
+      "razao_chances": 1.152
+    },
+    {
+      "variavel": "log_populacao",
+      "coef": 0.174,
+      "razao_chances": 1.191
+    },
+    {
+      "variavel": "UF TO",
+      "coef": 0.236,
+      "razao_chances": 1.267
+    },
+    {
+      "variavel": "UF AL",
+      "coef": 0.253,
+      "razao_chances": 1.288
+    },
+    {
+      "variavel": "UF MS",
+      "coef": 0.278,
+      "razao_chances": 1.32
+    },
+    {
+      "variavel": "região Nordeste",
+      "coef": 0.346,
+      "razao_chances": 1.414
+    },
+    {
+      "variavel": "UF MT",
+      "coef": 0.368,
+      "razao_chances": 1.445
+    },
+    {
+      "variavel": "UF AM",
+      "coef": 0.389,
+      "razao_chances": 1.476
+    },
+    {
+      "variavel": "UF RJ",
+      "coef": 0.452,
+      "razao_chances": 1.572
+    },
+    {
+      "variavel": "UF RN",
+      "coef": 0.538,
+      "razao_chances": 1.713
+    },
+    {
+      "variavel": "UF SP",
+      "coef": 0.608,
+      "razao_chances": 1.837
+    },
+    {
+      "variavel": "UF AP",
+      "coef": 0.623,
+      "razao_chances": 1.864
+    },
+    {
+      "variavel": "região Norte",
+      "coef": 0.626,
+      "razao_chances": 1.87
+    },
+    {
+      "variavel": "esforco_exigido",
+      "coef": 0.731,
+      "razao_chances": 2.078
+    },
+    {
+      "variavel": "UF SE",
+      "coef": 0.923,
+      "razao_chances": 2.516
+    },
+    {
+      "variavel": "UF RS",
+      "coef": 1.741,
+      "razao_chances": 5.705
+    },
+    {
+      "variavel": "taxa_atual",
+      "coef": 1.886,
+      "razao_chances": 6.595
+    },
+    {
+      "variavel": "UF BA",
+      "coef": 1.964,
+      "razao_chances": 7.126
+    }
+  ],
+  "permutacao": {
+    "taxa_atual": 0.1902,
+    "sigla_uf": 0.1847,
+    "media_portugues": 0.0579,
+    "esforco_exigido": 0.0562,
+    "regiao": 0.0373,
+    "participacao": 0.013,
+    "log_populacao": 0.0076,
+    "log_pib_per_capita": 0.0004,
+    "porte_municipio": 0.0004
+  },
+  "estabilidade": [
+    {
+      "variavel": "taxa_atual",
+      "posicao_media": 1.25,
+      "melhor": 1,
+      "pior": 2
+    },
+    {
+      "variavel": "sigla_uf",
+      "posicao_media": 1.75,
+      "melhor": 1,
+      "pior": 2
+    },
+    {
+      "variavel": "media_portugues",
+      "posicao_media": 3.12,
+      "melhor": 3,
+      "pior": 4
+    },
+    {
+      "variavel": "esforco_exigido",
+      "posicao_media": 3.88,
+      "melhor": 3,
+      "pior": 4
+    },
+    {
+      "variavel": "regiao",
+      "posicao_media": 5.0,
+      "melhor": 5,
+      "pior": 5
+    },
+    {
+      "variavel": "participacao",
+      "posicao_media": 6.0,
+      "melhor": 6,
+      "pior": 6
+    },
+    {
+      "variavel": "log_populacao",
+      "posicao_media": 7.25,
+      "melhor": 7,
+      "pior": 9
+    },
+    {
+      "variavel": "log_pib_per_capita",
+      "posicao_media": 7.88,
+      "melhor": 7,
+      "pior": 8
+    },
+    {
+      "variavel": "porte_municipio",
+      "posicao_media": 8.88,
+      "melhor": 8,
+      "pior": 9
+    }
+  ],
+  "shap_medio_agrupado": {
+    "taxa_atual": 1.5605,
+    "sigla_uf": 1.5465,
+    "regiao": 0.6219,
+    "media_portugues": 0.4873,
+    "esforco_exigido": 0.4826,
+    "participacao": 0.2377,
+    "log_populacao": 0.1365,
+    "log_pib_per_capita": 0.1318,
+    "porte_municipio": 0.0733
+  },
+  "exemplo_shap": {
+    "id_municipio": "4305124",
+    "nome": "Cerrito",
+    "uf": "RS",
+    "contribuicoes": {
+      "sigla_uf": 1.727,
+      "taxa_atual": 1.461,
+      "participacao": 0.869,
+      "regiao": 0.206,
+      "media_portugues": 0.018,
+      "porte_municipio": -0.004,
+      "log_pib_per_capita": -0.023,
+      "log_populacao": -0.12,
+      "esforco_exigido": -0.135
+    },
+    "prob_risco": 0.979
+  }
+}
