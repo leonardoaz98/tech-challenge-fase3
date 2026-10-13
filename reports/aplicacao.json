@@ -1,0 +1,160 @@
+{
+  "limiar": 0.38,
+  "auc_oof_2024": 0.7867858392408897,
+  "validacao_faixas_2024": [
+    {
+      "faixa": "baixo",
+      "size": 1234,
+      "mean": 0.157
+    },
+    {
+      "faixa": "moderado",
+      "size": 866,
+      "mean": 0.321
+    },
+    {
+      "faixa": "alto",
+      "size": 2140,
+      "mean": 0.53
+    },
+    {
+      "faixa": "critico",
+      "size": 992,
+      "mean": 0.844
+    }
+  ],
+  "alerta_2024_recall": 0.806873977086743,
+  "previsao_2025": {
+    "municipios": 5352,
+    "faixas": {
+      "baixo": 1675,
+      "moderado": 908,
+      "alto": 2152,
+      "critico": 617
+    },
+    "em_alerta": 2769,
+    "pct_alerta": 0.5173766816143498,
+    "rs_alerta_modelo_completo_pct": 95.69160997732426,
+    "rs_alerta_sem_choque_pct": 37.641723356009074,
+    "esforco_max_treino": 7.22,
+    "pct_esforco_acima_do_treino": 0.35818385650224216
+  },
+  "silhuetas": {
+    "3": 0.35222159558944743,
+    "4": 0.36121286581494527,
+    "5": 0.3528985454977548,
+    "6": 0.32468828416792167
+  },
+  "perfis": [
+    {
+      "perfil": 0,
+      "municipios": 1522,
+      "taxa_atual": 42.207,
+      "participacao": 91.792,
+      "esforco_exigido": 5.69,
+      "pct_falhou_2024": 0.383,
+      "nome": "baixo desempenho, alta participação"
+    },
+    {
+      "perfil": 1,
+      "municipios": 593,
+      "taxa_atual": 92.297,
+      "participacao": 93.79,
+      "esforco_exigido": -11.73,
+      "pct_falhou_2024": 0.361,
+      "nome": "alto desempenho, alta participação"
+    },
+    {
+      "perfil": 2,
+      "municipios": 1097,
+      "taxa_atual": 49.545,
+      "participacao": 80.811,
+      "esforco_exigido": 4.83,
+      "pct_falhou_2024": 0.591,
+      "nome": "baixo desempenho, baixa participação"
+    },
+    {
+      "perfil": 3,
+      "municipios": 2020,
+      "taxa_atual": 70.855,
+      "participacao": 92.046,
+      "esforco_exigido": 1.445,
+      "pct_falhou_2024": 0.495,
+      "nome": "desempenho médio, alta participação"
+    }
+  ],
+  "top_uf_alerta": [
+    {
+      "sigla_uf": "BA",
+      "municipios": 398,
+      "risco_medio": 0.7,
+      "pct_alerta": 98.7,
+      "pct_alerta_modelo_completo": 98.7
+    },
+    {
+      "sigla_uf": "PA",
+      "municipios": 142,
+      "risco_medio": 0.6,
+      "pct_alerta": 97.2,
+      "pct_alerta_modelo_completo": 97.2
+    },
+    {
+      "sigla_uf": "RJ",
+      "municipios": 92,
+      "risco_medio": 0.6,
+      "pct_alerta": 95.7,
+      "pct_alerta_modelo_completo": 95.7
+    },
+    {
+      "sigla_uf": "PR",
+      "municipios": 398,
+      "risco_medio": 0.5,
+      "pct_alerta": 86.4,
+      "pct_alerta_modelo_completo": 86.4
+    },
+    {
+      "sigla_uf": "AC",
+      "municipios": 22,
+      "risco_medio": 0.6,
+      "pct_alerta": 86.4,
+      "pct_alerta_modelo_completo": 86.4
+    }
+  ],
+  "menos_alerta": [
+    {
+      "sigla_uf": "CE",
+      "municipios": 184,
+      "risco_medio": 0.1,
+      "pct_alerta": 0.0,
+      "pct_alerta_modelo_completo": 0.0
+    },
+    {
+      "sigla_uf": "GO",
+      "municipios": 245,
+      "risco_medio": 0.1,
+      "pct_alerta": 0.4,
+      "pct_alerta_modelo_completo": 0.4
+    },
+    {
+      "sigla_uf": "ES",
+      "municipios": 78,
+      "risco_medio": 0.2,
+      "pct_alerta": 1.3,
+      "pct_alerta_modelo_completo": 1.3
+    },
+    {
+      "sigla_uf": "MG",
+      "municipios": 818,
+      "risco_medio": 0.2,
+      "pct_alerta": 12.7,
+      "pct_alerta_modelo_completo": 12.7
+    },
+    {
+      "sigla_uf": "RS",
+      "municipios": 441,
+      "risco_medio": 0.3,
+      "pct_alerta": 37.6,
+      "pct_alerta_modelo_completo": 95.7
+    }
+  ]
+}
