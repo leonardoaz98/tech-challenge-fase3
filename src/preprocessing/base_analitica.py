@@ -31,8 +31,9 @@ VARIAVEIS FORA DO MODELO (decididas aqui, nao na EDA)
 
 ENRIQUECIMENTO IBGE
 -------------------
-Logica de populacao, porte e PIB por habitante adaptada do trabalho da
-Fernanda (github.com/fernanda161082/tech-challenge-fase3).
+Populacao (log e porte em faixas de politica publica) e PIB por habitante
+(PIB em mil reais x 1000 / populacao, em log). A UF do codigo IBGE e
+conferida contra a UF informada pelo proprio IBGE.
 
 Execucao:
     python -m src.preprocessing.base_analitica

@@ -622,14 +622,13 @@ Segue a estrutura mínima do enunciado:
 
 ## Versionamento
 
-Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
+Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
 
-## Créditos
+## Autor
 
-Projeto individual de portfólio, a partir do Tech Challenge da Fase 3 (FIAP Pós Tech, AI Scientist), feito em grupo.
+**Leonardo Azevedo** — pipeline da Fase 2 (AWS), reconstrução da Gold, modelagem municipal, previsão 2025, microdados por aluno, modelo por aluno e documentação.
 
-- **Leonardo Azevedo** — pipeline da Fase 2 (AWS), reconstrução da Gold, modelagem, previsão 2025, microdados por aluno e documentação
-- **Fernanda** — versão do grupo em [fernanda161082/tech-challenge-fase3](https://github.com/fernanda161082/tech-challenge-fase3). O enriquecimento com IBGE, o script de download e a hipótese da participação como proxy de gestão vêm desse trabalho.
+Construído a partir do Tech Challenge da Fase 3 da pós em IA (FIAP Pós Tech, AI Scientist).
 
 ## Fontes
 

@@ -171,6 +171,7 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `feat/modelo-aluno` | Modelo por aluno, tetos, notebook 03 |
 | `docs/readme-aluno` | README e documentação técnica com o nível de aluno |
 | `fix/modelo-aluno-teste-e-busca` | Teste separado por município, busca em grade e SHAP no modelo por aluno; SHAP reprodutível |
+| `refactor/download-ibge` | Script de download do IBGE reescrito |
 
 Cada branch entrou na `main` por pull request.
 
