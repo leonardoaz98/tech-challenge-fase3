@@ -1,0 +1,5 @@
+# Unifica as identidades usadas durante o desenvolvimento.
+# O merge de pull request pelo GitHub usa o e-mail noreply, o que faria
+# o mesmo autor aparecer como dois contribuidores distintos.
+Leonardo Azevedo <gomes.azevedo98@gmail.com> <gomes.azevedo98@gmail.com>
+Leonardo Azevedo <gomes.azevedo98@gmail.com> <164606583+leonardoaz98@users.noreply.github.com>
