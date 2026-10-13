@@ -5,6 +5,9 @@ __pycache__/
 venv/
 .ipynb_checkpoints/
 
+# Microdados brutos do INEP (centenas de MB; o agregado por escola e versionado)
+data/raw/inep/microdados/
+
 # Derivados (regerados pelo pipeline)
 data/processed/
 models/

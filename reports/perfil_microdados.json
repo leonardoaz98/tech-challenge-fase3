@@ -1,0 +1,46 @@
+{
+  "2023": {
+    "alunos": 1747439,
+    "escolas": 36776,
+    "municipios": 4873,
+    "sem_proficiencia": 244630,
+    "valores_rede": {
+      "3": 1592299,
+      "2": 155140
+    },
+    "valores_presenca": {
+      "1": 1503058,
+      "0": 244381
+    },
+    "valores_alfabetizado": {
+      "1": 877427,
+      "0": 870012
+    },
+    "concordancia_flag_x_743": 1.0,
+    "taxa_alfabetizados_ponderada": 0.5746216295512118
+  },
+  "2024": {
+    "alunos": 2120560,
+    "escolas": 42497,
+    "municipios": 5519,
+    "sem_proficiencia": 268708,
+    "valores_rede": {
+      "3": 1840277,
+      "2": 280258,
+      "4": 25
+    },
+    "valores_presenca": {
+      "1": 1852788,
+      "0": 267772
+    },
+    "valores_alfabetizado": {
+      "1": 1107119,
+      "0": 1013441
+    },
+    "concordancia_flag_x_743": 1.0,
+    "taxa_alfabetizados_ponderada": 0.5919971080161598
+  },
+  "escolas_nos_dois_anos": 865,
+  "pct_escolas_2024_que_existiam_em_2023": 2.0,
+  "id_aluno_repetido_entre_anos": 1515671
+}
