@@ -1,315 +1,113 @@
-# Adaptado de github.com/fernanda161082/tech-challenge-fase3 (Fernanda, Tech Challenge Fase 3).
-# Mudanca: grava em data/raw/ibge.
 """
-Aquisicao de dados territoriais e populacionais do IBGE.
+Download das fontes do IBGE usadas no enriquecimento da base.
 
-Baixa duas fontes publicas e as salva em data/raw/, sem transformacao.
-A juncao com a base analitica e feita por um script separado.
+Grava em data/raw/ibge/ tres CSVs, sem transformacao alem de achatar o
+JSON das APIs. Os arquivos ja estao versionados; este script so e
+necessario para atualizar os dados.
 
-POR QUE SEPARAR AQUISICAO DE TRANSFORMACAO
--------------------------------------------
-Se a API mudar ou sair do ar, o dado ja baixado continua disponivel e
-o trabalho de transformacao nao se perde. E o mesmo principio da
-camada Bronze: guardar a fonte como ela veio.
-
-O script e idempotente por padrao: se o arquivo ja existe, ele nao
-baixa de novo. Use --forcar para rebaixar.
-
-FONTES
-------
-1. Localidades  - nome do municipio, microrregiao, mesorregiao, UF
-   https://servicodados.ibge.gov.br/api/v1/localidades/municipios
-
-2. Populacao    - populacao residente estimada por municipio
-   API SIDRA, agregado 6579
-
-3. PIB          - Produto Interno Bruto municipal
-   API SIDRA, agregado 5938 (PIB dos Municipios)
+    ibge_localidades.csv  API de Localidades     nome, micro/mesorregiao, regioes imediata e intermediaria
+    ibge_populacao.csv    SIDRA, tabela 6579     populacao residente estimada
+    ibge_pib.csv          SIDRA, tabela 5938     PIB a precos correntes (mil reais)
 
 Execucao:
-    python src/preprocessing/baixar_dados_ibge.py
-    python src/preprocessing/baixar_dados_ibge.py --forcar
-    python src/preprocessing/baixar_dados_ibge.py --ano 2023
+    python -m src.preprocessing.baixar_dados_ibge
+    python -m src.preprocessing.baixar_dados_ibge --ano 2021 --forcar
 """
-
-from pathlib import Path
 import argparse
-import gzip
 import json
 import sys
-import unicodedata
-import urllib.error
 import urllib.request
 
 import pandas as pd
 
-RAIZ_PROJETO = Path(__file__).resolve().parents[2]
-PASTA_RAW = RAIZ_PROJETO / "data" / "raw" / "ibge"
+from src.config import RAW_IBGE
 
 URL_LOCALIDADES = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
-URL_POPULACAO = "https://apisidra.ibge.gov.br/values/t/6579/n6/all/v/9324/p/{ano}"
-
-# PIB dos Municipios (agregado 5938). A variavel nao e fixada no codigo:
-# o script consulta antes os metadados do agregado e escolhe a variavel
-# pelo nome. Isso evita depender de um numero magico que pode mudar.
-URL_METADADOS_PIB = "https://servicodados.ibge.gov.br/api/v3/agregados/5938/metadados"
-URL_PIB = "https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/{variavel}/p/{ano}"
-
-# Usada apenas se os metadados nao estiverem disponiveis. 37 e o PIB a
-# precos correntes; o valor per capita e calculado depois, dividindo
-# pela populacao.
-VARIAVEL_PIB_PADRAO = "37"
-
-TEMPO_LIMITE = 120  # segundos
+URL_SIDRA = "https://apisidra.ibge.gov.br/values/t/{tabela}/n6/all/v/{variavel}/p/{ano}"
+POPULACAO = {"tabela": 6579, "variavel": 9324}   # populacao residente estimada
+PIB = {"tabela": 5938, "variavel": 37}           # PIB a precos correntes
 
 
-def buscar_json(url: str, descricao: str):
-    """Faz a requisicao e devolve o JSON, ou encerra com mensagem clara."""
-    print(f"  baixando {descricao}...")
-    try:
-        requisicao = urllib.request.Request(
-            url, headers={"User-Agent": "tech-challenge-fase3/1.0"}
-        )
-        with urllib.request.urlopen(requisicao, timeout=TEMPO_LIMITE) as resposta:
-            dados = resposta.read()
-
-        # Servidores costumam comprimir a resposta para economizar banda.
-        # O urllib nao descomprime sozinho, ao contrario de navegadores e
-        # da biblioteca requests. A deteccao e feita pelos dois primeiros
-        # bytes (1f 8b identifica gzip), que e mais confiavel do que ler
-        # o cabecalho Content-Encoding: nem todo servidor o envia correto.
-        if dados[:2] == b"\x1f\x8b":
-            dados = gzip.decompress(dados)
-
-        return json.loads(dados.decode("utf-8"))
-    except urllib.error.HTTPError as erro:
-        print(f"  [ERRO] o servidor respondeu {erro.code} para {descricao}", file=sys.stderr)
-    except urllib.error.URLError as erro:
-        print(f"  [ERRO] nao foi possivel alcancar o servidor: {erro.reason}", file=sys.stderr)
-        print("         verifique sua conexao ou tente mais tarde", file=sys.stderr)
-    except json.JSONDecodeError:
-        print(f"  [ERRO] a resposta de {descricao} nao e um JSON valido", file=sys.stderr)
-    except TimeoutError:
-        print(f"  [ERRO] tempo esgotado ao baixar {descricao}", file=sys.stderr)
-    except UnicodeDecodeError:
-        print(f"  [ERRO] resposta de {descricao} em formato inesperado", file=sys.stderr)
-    return None
+def baixar(url: str):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        return json.load(resp)
 
 
-def extrair(dicionario: dict, *caminho, padrao=None):
-    """Percorre um dicionario aninhado sem quebrar em chave ausente.
-
-    A API de localidades aninha UF dentro de mesorregiao dentro de
-    microrregiao. Alguns municipios criados apos a reforma territorial
-    de 2017 nao trazem microrregiao, entao a leitura precisa tolerar
-    ausencias.
-    """
-    atual = dicionario
-    for chave in caminho:
-        if not isinstance(atual, dict) or chave not in atual:
-            return padrao
-        atual = atual[chave]
-    return atual if atual is not None else padrao
+def _nome(no: dict | None, *chaves: str):
+    """Desce no JSON aninhado; devolve None se algum nivel faltar."""
+    for chave in chaves:
+        if not isinstance(no, dict):
+            return None
+        no = no.get(chave)
+    return no
 
 
-def processar_localidades(bruto: list) -> pd.DataFrame:
-    """Achata a estrutura aninhada da API em uma tabela."""
+def localidades(dados: list) -> pd.DataFrame:
     linhas = []
-    for item in bruto:
-        micro = extrair(item, "microrregiao", padrao={})
-        meso = extrair(micro, "mesorregiao", padrao={})
-        linhas.append(
-            {
-                "id_municipio": str(item["id"]).zfill(7),
-                "nome_municipio": item.get("nome"),
-                "microrregiao": extrair(micro, "nome"),
-                "mesorregiao": extrair(meso, "nome"),
-                "sigla_uf_ibge": extrair(meso, "UF", "sigla"),
-                "regiao_imediata": extrair(item, "regiao-imediata", "nome"),
-                "regiao_intermediaria": extrair(
-                    item, "regiao-imediata", "regiao-intermediaria", "nome"
-                ),
-            }
-        )
-    return pd.DataFrame(linhas)
-
-
-def processar_populacao(bruto: list) -> pd.DataFrame:
-    """Converte a resposta do SIDRA em tabela.
-
-    O SIDRA devolve a primeira linha como cabecalho descritivo, nao
-    como dado. Os codigos das colunas sao: D1C = codigo do municipio,
-    V = valor da variavel.
-    """
-    if len(bruto) < 2:
-        return pd.DataFrame()
-
-    registros = bruto[1:]  # descarta a linha de cabecalho
-    linhas = []
-    for item in registros:
-        codigo = item.get("D1C")
-        valor = item.get("V")
-        if not codigo:
-            continue
-        try:
-            populacao = float(valor)
-        except (TypeError, ValueError):
-            populacao = None  # SIDRA usa '...' e '-' para indisponivel
-        linhas.append(
-            {"id_municipio": str(codigo).zfill(7), "populacao": populacao}
-        )
-    return pd.DataFrame(linhas)
-
-
-def sem_acento(texto: str) -> str:
-    """Remove acentos para comparar nomes de variaveis com seguranca."""
-    return "".join(
-        c for c in unicodedata.normalize("NFD", texto)
-        if unicodedata.category(c) != "Mn"
-    ).lower()
-
-
-def escolher_variavel_pib(metadados) -> tuple[str, str]:
-    """Descobre, nos metadados do agregado, qual variavel baixar.
-
-    Prefere o PIB per capita, que ja vem pronto. Se ele nao existir na
-    lista, cai para o PIB total, e o calculo por habitante e feito no
-    script de enriquecimento.
-
-    Devolve (id_da_variavel, nome_da_variavel).
-    """
-    if not isinstance(metadados, dict):
-        return VARIAVEL_PIB_PADRAO, "desconhecida (metadados indisponiveis)"
-
-    variaveis = metadados.get("variaveis") or []
-    for item in variaveis:
-        nome = sem_acento(str(item.get("nome", "")))
-        if "per capita" in nome:
-            print(f"  variavel escolhida: {item['id']} - {item.get('nome')}")
-            return str(item["id"]), str(item.get("nome"))
-
-    for item in variaveis:
-        nome = sem_acento(str(item.get("nome", "")))
-        if "produto interno bruto" in nome and "valor adicionado" not in nome:
-            print(f"  variavel escolhida: {item['id']} - {item.get('nome')}")
-            print("  (PIB total; o valor por habitante sera calculado depois)")
-            return str(item["id"]), str(item.get("nome"))
-
-    return VARIAVEL_PIB_PADRAO, "desconhecida (nome nao encontrado)"
-
-
-def processar_pib(bruto: list, nome_variavel: str) -> pd.DataFrame:
-    """Converte a resposta do SIDRA sobre PIB em tabela.
-
-    Alem do valor, guarda o nome da variavel e a unidade de medida.
-    Sem a unidade nao da para saber se o numero esta em reais ou em
-    milhares de reais, e um erro de fator 1000 passaria despercebido.
-    """
-    if len(bruto) < 2:
-        return pd.DataFrame()
-
-    # A primeira linha do SIDRA e descritiva: traz os ROTULOS dos campos
-    # ("Unidade de Medida"), nao os valores. A unidade real aparece em
-    # cada linha de dado, no campo MN.
-    unidade = str(bruto[1].get("MN", "")) if len(bruto) > 1 else ""
-
-    linhas = []
-    for item in bruto[1:]:
-        codigo = item.get("D1C")
-        if not codigo:
-            continue
-        try:
-            valor = float(item.get("V"))
-        except (TypeError, ValueError):
-            valor = None
+    for m in dados:
+        # municipios criados depois da ultima divisao regional vem sem
+        # microrregiao; a UF sai entao da regiao intermediaria
+        uf = (_nome(m, "microrregiao", "mesorregiao", "UF", "sigla")
+              or _nome(m, "regiao-imediata", "regiao-intermediaria", "UF", "sigla"))
         linhas.append({
-            "id_municipio": str(codigo).zfill(7),
-            "pib": valor,
-            "pib_variavel": nome_variavel,
-            "pib_unidade": unidade,
+            "id_municipio": str(m["id"]),
+            "nome_municipio": m["nome"],
+            "microrregiao": _nome(m, "microrregiao", "nome"),
+            "mesorregiao": _nome(m, "microrregiao", "mesorregiao", "nome"),
+            "sigla_uf_ibge": uf,
+            "regiao_imediata": _nome(m, "regiao-imediata", "nome"),
+            "regiao_intermediaria": _nome(m, "regiao-imediata", "regiao-intermediaria", "nome"),
         })
     return pd.DataFrame(linhas)
 
 
-def salvar(df: pd.DataFrame, nome: str) -> Path:
-    PASTA_RAW.mkdir(parents=True, exist_ok=True)
-    destino = PASTA_RAW / f"{nome}.csv"
-    df.to_csv(destino, index=False, encoding="utf-8")
-    print(f"  {nome:24} {len(df):>6} linhas -> {destino.name}")
-    return destino
+def sidra(dados: list) -> pd.DataFrame:
+    """A primeira linha do SIDRA traz os rotulos de cada campo; o resto, os valores."""
+    rotulos, linhas = dados[0], pd.DataFrame(dados[1:])
+    campo_codigo = next(k for k, v in rotulos.items() if v.startswith("Município (Código)"))
+    return pd.DataFrame({
+        "id_municipio": linhas[campo_codigo].astype(str),
+        # '-', '...' e 'X' significam valor indisponivel ou sigiloso
+        "valor": pd.to_numeric(linhas["V"], errors="coerce").astype(float),
+        "unidade": linhas["MN"],
+    })
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Baixa dados do IBGE")
-    parser.add_argument("--ano", type=int, default=2022,
-                        help="ano da estimativa populacional")
-    parser.add_argument("--ano-pib", type=int, default=2021,
-                        help="ano do PIB municipal (serie disponivel ate 2021)")
-    parser.add_argument("--forcar", action="store_true",
-                        help="rebaixa mesmo se o arquivo ja existir")
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ano", type=int, default=2021, help="ano de populacao e PIB")
+    parser.add_argument("--forcar", action="store_true", help="baixa mesmo se o arquivo existir")
     args = parser.parse_args()
+    RAW_IBGE.mkdir(parents=True, exist_ok=True)
 
-    print("\nAquisicao de dados do IBGE")
-    print("-" * 72)
+    tarefas = {
+        "ibge_localidades.csv": lambda: localidades(baixar(URL_LOCALIDADES)),
+        "ibge_populacao.csv": lambda: (
+            sidra(baixar(URL_SIDRA.format(ano=args.ano, **POPULACAO)))
+            .rename(columns={"valor": "populacao"})[["id_municipio", "populacao"]]),
+        "ibge_pib.csv": lambda: (
+            sidra(baixar(URL_SIDRA.format(ano=args.ano, **PIB)))
+            .rename(columns={"valor": "pib", "unidade": "pib_unidade"})
+            .assign(pib_variavel="Produto Interno Bruto a preços correntes")
+            [["id_municipio", "pib", "pib_variavel", "pib_unidade"]]),
+    }
+    for nome, tarefa in tarefas.items():
+        destino = RAW_IBGE / nome
+        if destino.exists() and not args.forcar:
+            print(f"  {nome}: ja existe (use --forcar para baixar de novo)")
+            continue
+        try:
+            df = tarefa()
+        except Exception as erro:
+            sys.exit(f"  {nome}: falhou ({erro})")
+        df.to_csv(destino, index=False)
+        print(f"  {nome}: {len(df)} municipios")
 
-    sucessos = 0
-
-    # ---------------- localidades ----------------
-    destino = PASTA_RAW / "ibge_localidades.csv"
-    if destino.exists() and not args.forcar:
-        print(f"  ibge_localidades.csv ja existe - pulando (use --forcar)")
-        sucessos += 1
-    else:
-        bruto = buscar_json(URL_LOCALIDADES, "localidades")
-        if bruto:
-            salvar(processar_localidades(bruto), "ibge_localidades")
-            sucessos += 1
-
-    # ---------------- populacao ----------------
-    destino = PASTA_RAW / "ibge_populacao.csv"
-    if destino.exists() and not args.forcar:
-        print(f"  ibge_populacao.csv ja existe - pulando (use --forcar)")
-        sucessos += 1
-    else:
-        bruto = buscar_json(URL_POPULACAO.format(ano=args.ano), f"populacao {args.ano}")
-        if bruto:
-            tabela = processar_populacao(bruto)
-            if len(tabela):
-                salvar(tabela, "ibge_populacao")
-                sucessos += 1
-            else:
-                print("  [AVISO] resposta de populacao vazia - verifique o ano")
-
-    # ---------------- PIB municipal ----------------
-    destino = PASTA_RAW / "ibge_pib.csv"
-    if destino.exists() and not args.forcar:
-        print(f"  ibge_pib.csv ja existe - pulando (use --forcar)")
-        sucessos += 1
-    else:
-        metadados = buscar_json(URL_METADADOS_PIB, "metadados do PIB")
-        variavel, nome_variavel = escolher_variavel_pib(metadados)
-        bruto = buscar_json(
-            URL_PIB.format(variavel=variavel, ano=args.ano_pib),
-            f"PIB municipal {args.ano_pib}",
-        )
-        if bruto:
-            tabela = processar_pib(bruto, nome_variavel)
-            if len(tabela):
-                salvar(tabela, "ibge_pib")
-                sucessos += 1
-            else:
-                print("  [AVISO] resposta de PIB vazia - verifique o ano")
-                print("          a serie do PIB municipal vai ate 2021")
-
-    print("-" * 72)
-    print(f"  {sucessos} de 3 fontes disponiveis em data/raw/\n")
-
-    if sucessos < 3:
-        print("  A base pode ser enriquecida com o que foi baixado.")
-        print("  O script de juncao trata fontes ausentes sem quebrar.\n")
-
-    return 0
+    pib = pd.read_csv(RAW_IBGE / "ibge_pib.csv")
+    if not pib["pib_unidade"].str.contains("Mil", case=False).all():
+        sys.exit("  PIB deveria vir em mil reais: confira a unidade antes de usar")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
