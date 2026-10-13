@@ -1,0 +1,111 @@
+{
+  "modelo_escolhido": "regressao_logistica",
+  "parametros": {
+    "C": 1
+  },
+  "features": [
+    "taxa_atual",
+    "media_portugues",
+    "participacao",
+    "esforco_exigido",
+    "log_populacao",
+    "log_pib_per_capita",
+    "sigla_uf",
+    "regiao",
+    "porte_municipio"
+  ],
+  "semente": 42,
+  "treino": 3924,
+  "teste": 1308,
+  "pct_risco": 0.46712538226299694,
+  "comparacao_cv": [
+    {
+      "modelo": "regressao_logistica",
+      "auc_cv": 0.778748357875911,
+      "desvio": 0.028042669253360613,
+      "combinacoes": 5,
+      "pior_auc": 0.7475558560528139,
+      "parametros": {
+        "C": 1
+      }
+    },
+    {
+      "modelo": "random_forest",
+      "auc_cv": 0.7778110185336443,
+      "desvio": 0.02012884112834832,
+      "combinacoes": 6,
+      "pior_auc": 0.7695347847244582,
+      "parametros": {
+        "max_depth": 12,
+        "min_samples_leaf": 5
+      }
+    },
+    {
+      "modelo": "gradient_boosting",
+      "auc_cv": 0.77591772046928,
+      "desvio": 0.019925842590569686,
+      "combinacoes": 12,
+      "pior_auc": 0.747232312260817,
+      "parametros": {
+        "l2_regularization": 0.0,
+        "learning_rate": 0.03,
+        "max_leaf_nodes": 15
+      }
+    },
+    {
+      "modelo": "baseline",
+      "auc_cv": 0.5,
+      "desvio": 0.0,
+      "combinacoes": 1,
+      "pior_auc": 0.5,
+      "parametros": {}
+    }
+  ],
+  "auc_cv_oof": 0.7777488172494125,
+  "recall_minimo_alvo": 0.8,
+  "teste_limiar_0_5": {
+    "limiar": 0.5,
+    "auc": 0.798587352389361,
+    "recall_risco": 0.6563011456628478,
+    "precisao_risco": 0.714795008912656,
+    "f1_risco": 0.6843003412969283,
+    "acuracia": 0.7171253822629969,
+    "sinalizados_pct": 0.4288990825688073,
+    "matriz_confusao": [
+      [
+        537,
+        160
+      ],
+      [
+        210,
+        401
+      ]
+    ]
+  },
+  "teste_limiar_escolhido": {
+    "limiar": 0.38,
+    "auc": 0.798587352389361,
+    "recall_risco": 0.8101472995090017,
+    "precisao_risco": 0.6403622250970246,
+    "f1_risco": 0.7153179190751445,
+    "acuracia": 0.6987767584097859,
+    "sinalizados_pct": 0.5909785932721713,
+    "matriz_confusao": [
+      [
+        419,
+        278
+      ],
+      [
+        116,
+        495
+      ]
+    ]
+  },
+  "gap_cv_teste": -0.019838994513449948,
+  "sensibilidade_sem_rs": {
+    "municipios": 4811,
+    "pct_risco": 0.42880897942215757,
+    "auc_cv": 0.7471213320172991,
+    "auc_teste": 0.7777834196540401
+  }
+}
