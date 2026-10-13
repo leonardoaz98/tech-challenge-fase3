@@ -1,0 +1,72 @@
+{
+  "ano": 2024,
+  "escolas": 42328,
+  "alunos": 2114604,
+  "decomposicao_proficiencia": {
+    "media_geral": 749.0,
+    "pct": {
+      "entre_ufs": 9.4,
+      "entre_municipios": 6.5,
+      "entre_escolas": 9.0,
+      "dentro_da_escola": 75.0
+    },
+    "pct_corrigido": {
+      "entre_ufs": 9.4,
+      "entre_municipios": 6.5,
+      "entre_escolas": 7.3,
+      "dentro_da_escola": 76.7
+    }
+  },
+  "decomposicao_alfabetizado_0_1": {
+    "taxa_geral": 59.2,
+    "pct": {
+      "entre_ufs": 5.2,
+      "entre_municipios": 4.2,
+      "entre_escolas": 7.2,
+      "dentro_da_escola": 83.4
+    },
+    "pct_corrigido": {
+      "entre_ufs": 5.2,
+      "entre_municipios": 4.2,
+      "entre_escolas": 5.4,
+      "dentro_da_escola": 85.3
+    },
+    "soma_conferida": 100.0
+  },
+  "dispersao_municipio": {
+    "municipios_avaliados": 3258,
+    "amplitude_mediana_pp": 27.7,
+    "amplitude_mediana_so_acaso_pp": 15.9,
+    "amplitude_real_estimada_pp": 22.7,
+    "pct_com_amplitude_acima_de_30pp": 44.1
+  },
+  "escolas_criticas_escondidas": {
+    "municipios_que_bateram_a_meta": 2788,
+    "escolas_criticas_nesses_municipios": 1530,
+    "municipios_com_ao_menos_uma": 542,
+    "pct_municipios_que_bateram_com_escola_critica": 19.4,
+    "alunos_nessas_escolas": 68492,
+    "esperadas_so_por_acaso": 756,
+    "acima_do_acaso": 774
+  },
+  "rede_e_porte": {
+    "taxa_por_rede": {
+      "Estadual": 61.7,
+      "Municipal": 58.8
+    },
+    "taxa_por_porte": {
+      "até 10": 59.7,
+      "11–25": 58.3,
+      "26–50": 58.9,
+      "51–100": 60.1,
+      "mais de 100": 58.5
+    },
+    "alunos_por_porte": {
+      "até 10": 8408,
+      "11–25": 230173,
+      "26–50": 462941,
+      "51–100": 850925,
+      "mais de 100": 562157
+    }
+  }
+}
