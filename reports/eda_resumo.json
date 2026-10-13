@@ -1,0 +1,130 @@
+{
+  "municipios": 5232,
+  "pct_risco": 46.7,
+  "ufs": 24,
+  "ufs_ausentes_no_treino": [
+    "AC"
+  ],
+  "municipios_sem_meta_2024": 216,
+  "auc_univariada": [
+    {
+      "variavel": "sigla_uf",
+      "auc": 0.73,
+      "direcao": "categorica"
+    },
+    {
+      "variavel": "regiao",
+      "auc": 0.639,
+      "direcao": "categorica"
+    },
+    {
+      "variavel": "participacao",
+      "auc": 0.608,
+      "direcao": "maior -> menos risco"
+    },
+    {
+      "variavel": "log_populacao",
+      "auc": 0.543,
+      "direcao": "maior -> mais risco"
+    },
+    {
+      "variavel": "porte_municipio",
+      "auc": 0.526,
+      "direcao": "categorica"
+    },
+    {
+      "variavel": "log_pib_per_capita",
+      "auc": 0.522,
+      "direcao": "maior -> mais risco"
+    },
+    {
+      "variavel": "media_portugues",
+      "auc": 0.516,
+      "direcao": "maior -> menos risco"
+    },
+    {
+      "variavel": "taxa_atual",
+      "auc": 0.515,
+      "direcao": "maior -> mais risco"
+    },
+    {
+      "variavel": "esforco_exigido",
+      "auc": 0.511,
+      "direcao": "maior -> menos risco"
+    }
+  ],
+  "pares_correlacao_alta": [
+    [
+      "taxa_atual",
+      "media_portugues",
+      0.931
+    ],
+    [
+      "taxa_atual",
+      "esforco_exigido",
+      -0.848
+    ],
+    [
+      "media_portugues",
+      "esforco_exigido",
+      -0.866
+    ]
+  ],
+  "risco_por_uf": {
+    "menor": [
+      "CE",
+      8.7
+    ],
+    "maior": [
+      "RS",
+      90.5
+    ]
+  },
+  "participacao": [
+    {
+      "faixa": "< 85%",
+      "municipios": 1070,
+      "risco": 0.6,
+      "variacao": 0.28,
+      "volatilidade": 16.14
+    },
+    {
+      "faixa": "85–90%",
+      "municipios": 1309,
+      "risco": 0.52,
+      "variacao": 2.47,
+      "volatilidade": 15.78
+    },
+    {
+      "faixa": "90–95%",
+      "municipios": 1730,
+      "risco": 0.42,
+      "variacao": 3.62,
+      "volatilidade": 16.67
+    },
+    {
+      "faixa": "≥ 95%",
+      "municipios": 1123,
+      "risco": 0.35,
+      "variacao": 4.24,
+      "volatilidade": 17.46
+    }
+  ],
+  "teto_previsibilidade": {
+    "desvio_variacao": 16.6,
+    "esforco_mediano": 3.2,
+    "pct_esforco_negativo": 17.8,
+    "pct_falharam_com_esforco_negativo": 44.9
+  },
+  "riqueza": {
+    "corr_entre_ufs": -0.024,
+    "corr_media_dentro_uf": 0.008
+  },
+  "rio_grande_do_sul": {
+    "variacao_media_rs": -20.0,
+    "variacao_media_demais": 4.8,
+    "risco_rs": 90.5,
+    "taxa_2023_rs": 73.1,
+    "taxa_2023_demais": 59.4
+  }
+}
