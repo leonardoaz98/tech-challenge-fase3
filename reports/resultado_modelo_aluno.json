@@ -1,0 +1,54 @@
+{
+  "ano": 2024,
+  "escolas": 40088,
+  "municipios": 5232,
+  "alunos_avaliados_cobertos_pct": 95.3,
+  "comparacao": [
+    {
+      "modelo": "baseline (taxa nacional)",
+      "auc": 0.5,
+      "tipo": "piso"
+    },
+    {
+      "modelo": "logistica_so_municipio",
+      "auc": 0.6502,
+      "tipo": "modelo"
+    },
+    {
+      "modelo": "logistica_municipio_e_escola",
+      "auc": 0.6549,
+      "tipo": "modelo"
+    },
+    {
+      "modelo": "boosting_municipio_e_escola",
+      "auc": 0.6553,
+      "tipo": "modelo"
+    },
+    {
+      "modelo": "teto: taxa real do municipio",
+      "auc": 0.675,
+      "tipo": "teto"
+    },
+    {
+      "modelo": "teto: taxa real da escola",
+      "auc": 0.7359,
+      "tipo": "teto"
+    }
+  ],
+  "modelo_escolhido": "logistica_municipio_e_escola",
+  "ganho_das_variaveis_de_escola": 0.0046,
+  "pct_do_caminho_ate_o_teto": 65.7,
+  "importancia": {
+    "sigla_uf": 0.0311,
+    "media_portugues": 0.0287,
+    "rede_escola": 0.0087,
+    "regiao": 0.0063,
+    "esforco_exigido": 0.0059,
+    "participacao": 0.0053,
+    "porte_municipio": 0.0028,
+    "taxa_atual": 0.0016,
+    "log_pib_per_capita": 0.0009,
+    "log_populacao": 0.0006,
+    "log_alunos_escola": 0.0002
+  }
+}

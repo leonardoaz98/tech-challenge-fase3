@@ -23,6 +23,9 @@ ETAPAS = [
     ("Treino e validacao", "src.modeling.treinar", []),
     ("Interpretabilidade", "src.evaluation.interpretar", []),
     ("Aplicacao: ranking 2025 e perfis", "src.evaluation.aplicacao", []),
+    ("Escolas: microdado por aluno na Gold", "src.preprocessing.escolas", []),
+    ("Desigualdade entre escolas", "src.visualization.desigualdade", []),
+    ("Modelo por aluno", "src.modeling.modelo_aluno", []),
 ]
 
 
