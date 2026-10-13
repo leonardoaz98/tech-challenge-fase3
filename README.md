@@ -6,7 +6,7 @@ Projeto de portfólio construído a partir do Tech Challenge da Fase 3 da pós e
 
 **Resultados principais**
 - **Município:** regressão logística com AUC de 0,80 no teste, calibrada para detectar 81% dos municípios que falham. Ranking de 2025 com 5.352 municípios, 617 em risco crítico.
-- **Aluno:** AUC de 0,655 por criança, ~66% do caminho até o máximo possível com dados de escola. 77% da diferença entre as crianças está dentro da mesma escola.
+- **Aluno:** AUC de 0,663 por criança, em municípios nunca vistos no treino: ~68% do caminho até o máximo possível com dados de escola. 77% da diferença entre as crianças está dentro da mesma escola.
 - **Escolas:** ~770 escolas críticas reais (abaixo de 40%) escondidas em municípios que bateram a meta de 2024.
 
 | | |
@@ -48,8 +48,8 @@ O projeto tem **dois níveis**, cada um respondendo uma parte do enunciado:
 | Unidade | Aluno do 2º ano avaliado em 2024, com o peso amostral do INEP |
 | Alvo | `alfabetizado = 1` se a proficiência é ≥ 743 |
 | Variáveis | Município em 2023 + escola em 2024 (rede e tamanho), todas conhecidas antes da prova |
-| Validação | `GroupKFold` por município |
-| Métrica | AUC por aluno, comparada com dois tetos teóricos |
+| Validação | 25% dos municípios guardados para teste; busca em grade com `GroupKFold` por município no treino |
+| Métrica | AUC por aluno no teste, comparada com dois tetos teóricos |
 
 **Por que os dois níveis.** A política de alfabetização é desenhada e financiada por rede de ensino, então **o município é a unidade de decisão** e é onde a antecipação acontece (nível 1). O enunciado pede prever a criança, e os microdados do INEP permitem isso (nível 2), com uma ressalva importante: eles não trazem nada da criança antes da prova, só a escola e o município onde ela estuda. O nível 2 mostra até onde esse contexto leva.
 
@@ -202,7 +202,14 @@ Quatro barreiras contra vazamento:
 Mesmo `Pipeline` (imputação, `LimitarFaixa`, padronização, one-hot), com duas diferenças:
 
 - **Duas linhas por escola:** alfabetizados e não alfabetizados, cada uma com o peso somado dos seus alunos. Equivale a uma linha por aluno (seção 3.5).
-- **`GroupKFold` por município:** todas as escolas de um município caem na mesma partição. Sem isso, o modelo veria escolas vizinhas no treino e a AUC sairia otimista.
+- **Separação por município:** todas as escolas de um município ficam do mesmo lado. Sem isso, o modelo veria escolas vizinhas no treino e a AUC sairia otimista.
+
+O protocolo é o mesmo do nível 1:
+
+1. **Teste:** 25% dos municípios (1.308) ficam fora de tudo (`GroupShuffleSplit`).
+2. **Busca em grade** nos outros 3.924, com `GroupKFold(5)` por município e AUC **ponderada pelo peso dos alunos**. Os scorers padrão do scikit-learn ignorariam o peso, e aqui cada linha representa um grupo de alunos.
+3. **Escolha** pela AUC de validação, com a mesma regra de interpretabilidade.
+4. **Avaliação única** no teste.
 
 A participação da escola na prova fica fora: ela só é conhecida no dia da avaliação, então não serve para antecipar.
 
@@ -229,13 +236,13 @@ Os três modelos empatarem também diz algo: não há interação complexa para 
 
 ### 5.3 Modelo por aluno
 
-| Modelo | AUC por aluno |
-|---|---|
-| Logística, só variáveis do município | 0,650 |
-| **Logística, município + escola** | **0,655** |
-| Boosting, município + escola | 0,655 |
+| Modelo | AUC (validação) | Melhor configuração |
+|---|---|---|
+| Logística, só variáveis do município | 0,645 | `C=0,01` |
+| **Logística, município + escola** | **0,652** | `C=0,01` |
+| Boosting, município + escola | 0,652 | `learning_rate=0,05`, `max_leaf_nodes=31` |
 
-Mesma regra do nível 1: logística e boosting empatam (diferença de 0,0004), então a logística vence por ser legível.
+12 combinações × 5 partições. Mesma regra do nível 1: logística e boosting empatam (diferença de 0,0003), então a logística vence por ser legível. A regularização quase não muda a AUC da logística (0,6516 a 0,6517 entre `C=0,01` e `C=10`): com 11 variáveis e 60 mil linhas, não há espaço para sobreajuste.
 
 ## 6. Métricas de avaliação
 
@@ -284,18 +291,25 @@ Score de 2024 calculado fora da amostra (`cross_val_predict`) para todos os muni
 
 ### 6.5 Modelo por aluno e o teto do possível
 
-40.088 escolas e 5.232 municípios, cobrindo 95% dos alunos avaliados em 2024.
+40.088 escolas e 5.232 municípios, cobrindo 95% dos alunos avaliados em 2024. Teste com 1.308 municípios que o modelo nunca viu.
 
 ![AUC por aluno](images/aluno_auc_comparacao.png)
 
-Para saber se 0,655 é pouco ou muito, o modelo é comparado com dois **tetos** que usam o resultado real de 2024, portanto impossíveis na prática:
-
-| Referência | AUC |
+| | AUC por aluno |
 |---|---|
-| Saber a taxa real do município em 2024 | 0,675 |
-| **Saber a taxa real da escola em 2024** | **0,736** |
+| Validação (treino) | 0,652 ± 0,011 |
+| **Teste** | **0,663** |
 
-O segundo é o máximo que **qualquer** modelo com variáveis de escola alcançaria. O modelo percorre **66% do caminho** entre o acaso (0,5) e esse teto. O resto da distância até 1,0 está em informação da criança que os dados abertos não têm.
+O teste ficou 0,011 acima da validação, dentro do desvio entre partições: não há sobreajuste.
+
+Para saber se 0,663 é pouco ou muito, o modelo é comparado, **no mesmo teste**, com dois tetos que usam o resultado real de 2024, portanto impossíveis na prática:
+
+| Referência | AUC no teste |
+|---|---|
+| Saber a taxa real do município em 2024 | 0,685 |
+| **Saber a taxa real da escola em 2024** | **0,741** |
+
+O segundo é o máximo que **qualquer** modelo com variáveis de escola alcançaria. O modelo percorre **68% do caminho** entre o acaso (0,5) e esse teto. O resto da distância até 1,0 está em informação da criança que os dados abertos não têm.
 
 ## 7. Interpretação dos resultados
 
@@ -356,9 +370,19 @@ PIB por habitante e população têm importância praticamente nula. Entre UFs, 
 
 ### 7.7 Modelo por aluno: o que pesa
 
+![SHAP do modelo por aluno](images/aluno_shap_resumo.png)
+
+Cada ponto é uma escola do teste; à direita do zero, a variável aumenta a chance de a criança ser alfabetizada.
+
 ![Importância no modelo por aluno](images/aluno_importancia.png)
 
-UF e média em português do município dominam, seguidas da rede da escola (a estadual tem 61,7% de alfabetizados, a municipal 58,8%). O tamanho da escola não pesa: a taxa é praticamente a mesma em todas as faixas de porte. É o mesmo padrão do nível municipal: o contexto estadual pesa mais que qualquer característica local.
+- **UF e média em português do município** dominam nas duas medidas (SHAP e permutação no teste).
+- Ceará e Minas puxam para cima; Rio Grande do Sul (choque de 2024) e Bahia, para baixo.
+- **Esforço exigido** alto reduz a chance; **participação** alta do município aumenta.
+- **Rede estadual** aumenta a chance (61,7% de alfabetizados, contra 58,8% na municipal).
+- O **tamanho da escola** não pesa: a taxa é praticamente a mesma em todas as faixas de porte.
+
+É o mesmo padrão do nível municipal: o contexto estadual pesa mais que qualquer característica local, e a escola acrescenta pouco (+0,001 de AUC no teste sobre o modelo só com município).
 
 ## 8. Insights encontrados
 
@@ -370,7 +394,7 @@ UF e média em português do município dominam, seguidas da rede da escola (a e
 | Quais municípios apresentam maior risco educacional? | 617 em risco crítico para 2025, concentrados na Bahia, Pará e Rio de Janeiro. Além deles, 542 municípios que bateram a meta têm escolas críticas escondidas pela média | 10.2, 8.6 |
 | Quais regiões possuem padrões semelhantes? | 4 perfis (KMeans); o que mais separa é a participação: 59% de falha com participação baixa x 38% com alta | 8.3, `perfis.csv` |
 | Como prever municípios que podem não atingir metas futuras? | Modelo treinado em 2023→2024 aplicado a 2024→2025, com limiar que detecta 81% das falhas | 6, 10.2 |
-| Quais variáveis possuem maior influência nos modelos? | Taxa atual e UF se revezam no 1º lugar nas 8 sementes; depois média de português e esforço. No modelo por aluno, UF e média de português, seguidas da rede da escola | 7.1, 7.2, 7.7 |
+| Quais variáveis possuem maior influência nos modelos? | Taxa atual e UF se revezam no 1º lugar nas 8 sementes; depois média de português e esforço. No modelo por aluno, UF e média de português do município; a escola acrescenta pouco | 7.1, 7.2, 7.7 |
 
 ### 8.1 O estado pesa mais que o município
 
@@ -541,7 +565,7 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-python -m src.run_pipeline             # tudo, ~2 min
+python -m src.run_pipeline             # tudo, ~3 min
 python -m src.run_pipeline --rapido    # sem busca de hiperparâmetros
 python -m src.run_pipeline --s3        # Gold direto do S3 da Fase 2 (exige credencial AWS)
 ```
@@ -594,11 +618,11 @@ Segue a estrutura mínima do enunciado:
 | Documentação técnica | [`reports/documentacao_tecnica.md`](reports/documentacao_tecnica.md) |
 | Vídeo executivo | _link após a gravação_ |
 | Pipeline reproduzível | `python -m src.run_pipeline`, conferido em ambiente limpo |
-| Análises e visualizações | `images/` (18 gráficos) e `reports/` |
+| Análises e visualizações | `images/` (19 gráficos) e `reports/` |
 
 ## Versionamento
 
-Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
+Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
 
 ## Créditos
 

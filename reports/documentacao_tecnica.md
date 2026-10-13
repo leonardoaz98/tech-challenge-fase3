@@ -88,10 +88,12 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | 20 | Taxa da escola com o peso do INEP | É a conta do indicador oficial | Reproduz o oficial com erro médio de 0,03 p.p. |
 | 21 | Sem histórico de escola | Código mascarado a cada edição | 2% das escolas de 2024 com o mesmo código em 2023 |
 | 22 | Participação da escola fora do modelo por aluno | Só é conhecida no dia da prova | — |
-| 23 | `GroupKFold` por município no modelo por aluno | Escolas vizinhas no treino inflariam a AUC | — |
+| 23 | Teste e validação separados por município no modelo por aluno | Escolas vizinhas no treino inflariam a AUC | 25% dos municípios no teste; `GroupKFold(5)` no treino |
 | 24 | Tetos com o resultado real | Medir quanto ainda cabe melhorar com dados de escola | Teto da escola: AUC 0,736 |
 | 25 | Simular o acaso na dispersão entre escolas | Escola pequena oscila por sorte | Metade das escolas críticas observadas seria acaso |
 | 26 | Lista por município, não por escola | O código é fictício; a secretaria localiza as próprias escolas | `municipios_com_escolas_criticas.csv` |
+| 27 | Busca em grade com AUC ponderada pelo peso dos alunos | Cada linha representa um grupo de alunos; o scorer padrão ignoraria o peso | 12 combinações; validação 0,652, teste 0,663 |
+| 28 | Semente fixa antes de cada SHAP | O SHAP sorteia a amostra de fundo e a posição dos pontos | Gráficos idênticos a cada execução |
 
 ---
 
@@ -109,7 +111,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | `src/preprocessing/microdados_inep.py` | zips do INEP em `data/raw/inep/microdados/` (fora do git) | `data/raw/inep/alunos_por_escola.csv`, `reports/perfil_microdados.json` |
 | `src/preprocessing/escolas.py` | `alunos_por_escola.csv` + Gold | `data/gold/fato_escola.parquet`, `reports/validacao_microdados.json` (para se não reproduzir o indicador oficial) |
 | `src/visualization/desigualdade.py` | `fato_escola` | `images/escolas_*.png`, `reports/escolas_resumo.json`, `reports/municipios_com_escolas_criticas.csv` |
-| `src/modeling/modelo_aluno.py` | `fato_escola` + `base_treino` | `models/modelo_aluno.joblib`, `reports/resultado_modelo_aluno.json`, `images/aluno_*.png` |
+| `src/modeling/modelo_aluno.py` | `fato_escola` + `base_treino` | `models/modelo_aluno.joblib`, `reports/resultado_modelo_aluno.json`, `images/aluno_*.png` (comparação, permutação e SHAP) |
 | `src/run_pipeline.py` | — | roda tudo na ordem (a extração dos microdados é à parte) |
 
 Parâmetros compartilhados (anos, semente, proporção de teste, folds, recall mínimo) ficam em `src/config.py`.
@@ -126,12 +128,13 @@ Parâmetros compartilhados (anos, semente, proporção de teste, folds, recall m
 | Tratamento de data leakage | Separação temporal; `_taxa_alvo` fora; transformações no Pipeline; limiar e busca só no treino |
 | Pré-processamento integrado ao modelo | `Pipeline([("prep", ColumnTransformer), ("modelo", ...)])` |
 | Treino, validação e teste | 75/25 estratificado + `StratifiedKFold(5)` no treino |
-| Otimização | `GridSearchCV` (23 combinações × 5 folds) |
+| Otimização | `GridSearchCV` (23 combinações × 5 folds) no municipal; busca em grade ponderada (12 × 5) no modelo por aluno |
 | Redução de overfitting | Regularização na grade; gap CV × teste dentro do desvio |
 | Replicabilidade | Semente 42 em tudo; versões fixas; dados versionados; teste de 8 sementes |
 | Feature importance | `permutation_importance` + coeficientes |
 | SHAP | `shap.LinearExplainer`, resumo e por município |
-| Validação sem vazamento entre escolas vizinhas (modelo por aluno) | `GroupKFold` por município |
+| Treino, validação e teste no modelo por aluno | `GroupShuffleSplit` (25% dos municípios no teste) + `GroupKFold(5)` no treino |
+| SHAP no modelo por aluno | `shap.LinearExplainer`, resumo numa amostra do teste |
 
 ---
 
@@ -142,8 +145,8 @@ pip install -r requirements.txt
 python -m src.run_pipeline
 ```
 
-- Conferido em ambiente limpo (venv novo, clone novo): os relatórios em `reports/` saem **idênticos byte a byte**. Só os PNG mudam nos metadados de renderização.
-- Tempo: ~2 min com busca de hiperparâmetros, incluindo o nível de escola e aluno.
+- Conferido em ambiente limpo (venv novo, clone novo) e em duas execuções seguidas: `reports/` e `images/` saem **idênticos byte a byte**, inclusive os gráficos SHAP.
+- Tempo: ~3 min com as duas buscas de hiperparâmetros (municipal e por aluno).
 - A extração dos microdados (`microdados_inep.py`) fica fora do `run_pipeline`: depende de baixar ~40 MB do INEP, e o resultado já está versionado.
 - Sem internet e sem AWS: dados brutos e Gold estão no repositório.
 - Com AWS: `python -m src.run_pipeline --s3` lê a Gold do data lake da Fase 2.
@@ -167,6 +170,7 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `feat/desigualdade-escolas` | Decomposição da variância, dispersão entre escolas, escolas críticas escondidas |
 | `feat/modelo-aluno` | Modelo por aluno, tetos, notebook 03 |
 | `docs/readme-aluno` | README e documentação técnica com o nível de aluno |
+| `fix/modelo-aluno-teste-e-busca` | Teste separado por município, busca em grade e SHAP no modelo por aluno; SHAP reprodutível |
 
 Cada branch entrou na `main` por pull request.
 

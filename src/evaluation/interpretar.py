@@ -117,11 +117,13 @@ def shap_valores(modelo, Xtr, Xte):
     nomes = [nome_legivel(n).replace("_", " ") for n in prep.get_feature_names_out()]
     Ztr = pd.DataFrame(prep.transform(Xtr), columns=nomes)
     Zte = pd.DataFrame(prep.transform(Xte), columns=nomes, index=Xte.index)
+    np.random.seed(SEMENTE)  # o SHAP sorteia a amostra de fundo; fixa para reproduzir
     explicador = shap.LinearExplainer(final, Ztr)
     return explicador(Zte), nomes
 
 
 def grafico_shap_resumo(sv) -> None:
+    np.random.seed(SEMENTE)  # o beeswarm sorteia a posicao vertical dos pontos
     plt.figure()
     shap.plots.beeswarm(sv, max_display=14, show=False,
                         color=plt.get_cmap("coolwarm"),
