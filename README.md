@@ -1,17 +1,21 @@
 # Previsão de risco na alfabetização dos municípios brasileiros
 
-Modelo que antecipa **quais municípios não vão atingir a meta de alfabetização do ano seguinte**, explica o porquê de cada alerta e gera a lista de prioridade para 2025.
+Modelo que antecipa **quais municípios não vão atingir a meta de alfabetização do ano seguinte**, explica o porquê de cada alerta e gera a lista de prioridade para 2025. Com os microdados do INEP, desce até **a escola e o aluno**: mede onde está a desigualdade e até onde dá para prever se uma criança será alfabetizada.
 
 Projeto de portfólio construído a partir do Tech Challenge da Fase 3 da pós em IA (FIAP). Continua a [pipeline de dados da Fase 2](https://github.com/leonardoaz98/aws-tech-challenge2-fiap) (arquitetura Medallion na AWS), que entrega a camada Gold usada aqui.
 
-**Resultado principal:** regressão logística com AUC de 0,80 no teste, calibrada para detectar 81% dos municípios que falham. Ranking de 2025 com 5.352 municípios, 617 em risco crítico.
+**Resultados principais**
+- **Município:** regressão logística com AUC de 0,80 no teste, calibrada para detectar 81% dos municípios que falham. Ranking de 2025 com 5.352 municípios, 617 em risco crítico.
+- **Aluno:** AUC de 0,655 por criança, ~66% do caminho até o máximo possível com dados de escola. 77% da diferença entre as crianças está dentro da mesma escola.
+- **Escolas:** ~770 escolas críticas reais (abaixo de 40%) escondidas em municípios que bateram a meta de 2024.
 
 | | |
 |---|---|
 | Vídeo executivo (5 min) | _link após a gravação_ |
 | Documentação técnica | [`reports/documentacao_tecnica.md`](reports/documentacao_tecnica.md) |
-| Notebooks | [01 · Análise exploratória](notebooks/01_analise_exploratoria.ipynb) · [02 · Modelagem e resultados](notebooks/02_modelagem_e_resultados.ipynb) |
+| Notebooks | [01 · Análise exploratória](notebooks/01_analise_exploratoria.ipynb) · [02 · Modelagem e resultados](notebooks/02_modelagem_e_resultados.ipynb) · [03 · Escolas e modelo por aluno](notebooks/03_escolas_e_modelo_aluno.ipynb) |
 | Ranking 2025 | [`reports/ranking_2025.csv`](reports/ranking_2025.csv) |
+| Municípios com escolas críticas | [`reports/municipios_com_escolas_criticas.csv`](reports/municipios_com_escolas_criticas.csv) |
 
 ---
 
@@ -23,7 +27,11 @@ Hoje o acompanhamento é retrospectivo. O gestor descobre que o município falho
 
 ## 2. Objetivo analítico
 
-> Quais municípios têm maior risco de não atingir a meta do próximo ano, e o que explica esse risco?
+> Quais municípios têm maior risco de não atingir a meta do próximo ano, e o que explica esse risco? E, descendo ao nível da criança: dá para prever se um aluno será alfabetizado, e onde está a desigualdade?
+
+O projeto tem **dois níveis**, cada um respondendo uma parte do enunciado:
+
+**Nível 1 · Município** (seções 4 a 7)
 
 | Elemento | Definição |
 |---|---|
@@ -33,7 +41,17 @@ Hoje o acompanhamento é retrospectivo. O gestor descobre que o município falho
 | Previsão | features de **2024** → meta de **2025** |
 | Métrica principal | AUC (qualidade da fila de prioridade) + recall da classe de risco |
 
-**Por que município, nesta etapa.** O enunciado fala em prever se um aluno será alfabetizado. O microdado por aluno existe (tabela `alunos` da Base dos Dados, anonimizada, com proficiência e indicador de alfabetizado), mas fica no BigQuery e não faz parte da Gold da Fase 2, que é agregada por município. Esta etapa trabalha no nível em que a Gold está e em que a decisão pública acontece: a política de alfabetização é desenhada e financiada por rede de ensino, então **o município é a unidade de decisão**. O modelo por aluno é a próxima etapa (seção 11).
+**Nível 2 · Aluno** (seções 3.5, 4.4, 5.3, 6.5, 7.7, 8.5 e 8.6)
+
+| Elemento | Definição |
+|---|---|
+| Unidade | Aluno do 2º ano avaliado em 2024, com o peso amostral do INEP |
+| Alvo | `alfabetizado = 1` se a proficiência é ≥ 743 |
+| Variáveis | Município em 2023 + escola em 2024 (rede e tamanho), todas conhecidas antes da prova |
+| Validação | `GroupKFold` por município |
+| Métrica | AUC por aluno, comparada com dois tetos teóricos |
+
+**Por que os dois níveis.** A política de alfabetização é desenhada e financiada por rede de ensino, então **o município é a unidade de decisão** e é onde a antecipação acontece (nível 1). O enunciado pede prever a criança, e os microdados do INEP permitem isso (nível 2), com uma ressalva importante: eles não trazem nada da criança antes da prova, só a escola e o município onde ela estuda. O nível 2 mostra até onde esse contexto leva.
 
 **Por que a classe positiva é "não atingiu".** É o evento que a política quer pegar. Assim recall, precisão e limiar falam direto de "municípios que vão falhar", sem inversão.
 
@@ -47,6 +65,7 @@ Hoje o acompanhamento é retrospectivo. O gestor descobre que o município falho
 | IBGE Localidades | Nome, micro e mesorregião | `data/raw/ibge/ibge_localidades.csv` |
 | IBGE SIDRA 6579 | População estimada (2021) | `data/raw/ibge/ibge_populacao.csv` |
 | IBGE SIDRA 5938 | PIB municipal (2021) | `data/raw/ibge/ibge_pib.csv` |
+| INEP · microdados da Avaliação da Alfabetização (2023 e 2024) | Um registro por aluno: escola, rede, presença, proficiência, peso | `data/raw/inep/alunos_por_escola.csv` (agregado por escola) |
 
 ### 3.2 Gold: local ou S3
 
@@ -90,6 +109,20 @@ Fora do modelo, com motivo:
 
 Fora: **DF** (não tem rede municipal) e **RR** (sem rede municipal na avaliação). O **AC** não tem dado de 2024 no treino, mas aparece em 2025; seus 22 municípios são avaliados sem o efeito de UF. 216 municípios de 2023 ficaram fora por não ter meta de 2024.
 
+### 3.5 Microdados por aluno
+
+O INEP publica um arquivo por ano com **uma linha por aluno do 2º ano** (`TS_ALUNO.csv`): 1,75 milhão em 2023 e 2,12 milhões em 2024. É a mesma fonte da tabela `alunos` da Base dos Dados. [`microdados_inep.py`](src/preprocessing/microdados_inep.py) lê os zips direto do site do INEP e agrega por escola × rede × ano (79 mil linhas, 4,8 MB, versionado). Os zips ficam fora do git.
+
+Por que agregar: os microdados não trazem nada da criança antes da prova (sexo, cor, renda, idade). Todas as variáveis são da escola ou do município, então treinar com uma linha por aluno ou com as contagens de alfabetizados e não alfabetizados por escola produz **exatamente o mesmo modelo**.
+
+| Conferência | Resultado |
+|---|---|
+| Taxa por município (rede municipal, ponderada) × indicador oficial | erro médio **0,03 p.p.**, 97% dos municípios abaixo de 0,1 |
+| `alfabetizado` do INEP × proficiência ≥ 743 | 100% de concordância |
+| Escolas de 2024 com o mesmo código em 2023 | **2%**: o INEP mascara o código a cada edição |
+
+A primeira linha valida a extração inteira: somando os alunos com o peso do INEP, o indicador oficial é reproduzido. A última define o desenho do modelo por aluno: **não existe histórico de escola**, porque o código muda de um ano para o outro.
+
 ## 4. Etapas de modelagem
 
 ```
@@ -101,6 +134,11 @@ IBGE ─────────────────────┴─► ba
                                                      ├─► treinar.py ────► models/modelo.joblib, reports/resultado_modelo.json
                                                      ├─► interpretar.py ► images/interp_*, reports/interpretabilidade.json
                                                      └─► aplicacao.py ──► reports/ranking_2025.csv, perfis, UF
+
+Microdados INEP ─► microdados_inep.py ─► alunos_por_escola.csv ─► escolas.py ─► data/gold/fato_escola.parquet
+                                                                                    │
+                                                                                    ├─► desigualdade.py ─► images/escolas_*, municipios_com_escolas_criticas.csv
+                                                                                    └─► modelo_aluno.py ─► images/aluno_*, reports/resultado_modelo_aluno.json
 ```
 
 ### 4.1 O que a análise exploratória decidiu
@@ -159,6 +197,15 @@ Quatro barreiras contra vazamento:
 - **Validação:** `StratifiedKFold(5)` dentro do treino, usada na busca de hiperparâmetros e na escolha do limiar
 - Semente fixa (42) em todo o pipeline
 
+### 4.4 Modelo por aluno
+
+Mesmo `Pipeline` (imputação, `LimitarFaixa`, padronização, one-hot), com duas diferenças:
+
+- **Duas linhas por escola:** alfabetizados e não alfabetizados, cada uma com o peso somado dos seus alunos. Equivale a uma linha por aluno (seção 3.5).
+- **`GroupKFold` por município:** todas as escolas de um município caem na mesma partição. Sem isso, o modelo veria escolas vizinhas no treino e a AUC sairia otimista.
+
+A participação da escola na prova fica fora: ela só é conhecida no dia da avaliação, então não serve para antecipar.
+
 ## 5. Escolha do algoritmo
 
 ### 5.1 Comparação (AUC na validação cruzada, após `GridSearchCV`)
@@ -179,6 +226,16 @@ Quatro barreiras contra vazamento:
 O motivo é prestação de contas. Um alerta que direciona recurso público para crianças precisa responder "por que este município?". Na logística, cada coeficiente é uma frase legível; num ensemble de 300 árvores, não.
 
 Os três modelos empatarem também diz algo: não há interação complexa para as árvores capturarem, e com ruído alto, flexibilidade extra vira ajuste ao acaso.
+
+### 5.3 Modelo por aluno
+
+| Modelo | AUC por aluno |
+|---|---|
+| Logística, só variáveis do município | 0,650 |
+| **Logística, município + escola** | **0,655** |
+| Boosting, município + escola | 0,655 |
+
+Mesma regra do nível 1: logística e boosting empatam (diferença de 0,0004), então a logística vence por ser legível.
 
 ## 6. Métricas de avaliação
 
@@ -224,6 +281,21 @@ Score de 2024 calculado fora da amostra (`cross_val_predict`) para todos os muni
 | Moderado (0,25 a 0,38) | 866 | 32,1% |
 | Alto (0,38 a 0,70) | 2.140 | 53,0% |
 | Crítico (≥ 0,70) | 992 | **84,4%** |
+
+### 6.5 Modelo por aluno e o teto do possível
+
+40.088 escolas e 5.232 municípios, cobrindo 95% dos alunos avaliados em 2024.
+
+![AUC por aluno](images/aluno_auc_comparacao.png)
+
+Para saber se 0,655 é pouco ou muito, o modelo é comparado com dois **tetos** que usam o resultado real de 2024, portanto impossíveis na prática:
+
+| Referência | AUC |
+|---|---|
+| Saber a taxa real do município em 2024 | 0,675 |
+| **Saber a taxa real da escola em 2024** | **0,736** |
+
+O segundo é o máximo que **qualquer** modelo com variáveis de escola alcançaria. O modelo percorre **66% do caminho** entre o acaso (0,5) e esse teto. O resto da distância até 1,0 está em informação da criança que os dados abertos não têm.
 
 ## 7. Interpretação dos resultados
 
@@ -282,17 +354,23 @@ Cerrito (RS) tinha 75% em 2023, acima da média nacional, e recebeu 98% de risco
 
 PIB por habitante e população têm importância praticamente nula. Entre UFs, a correlação entre PIB mediano e risco é −0,02; dentro de cada UF, 0,01. **Políticas que segmentam por "município pequeno e pobre" estariam olhando a variável errada.**
 
+### 7.7 Modelo por aluno: o que pesa
+
+![Importância no modelo por aluno](images/aluno_importancia.png)
+
+UF e média em português do município dominam, seguidas da rede da escola (a estadual tem 61,7% de alfabetizados, a municipal 58,8%). O tamanho da escola não pesa: a taxa é praticamente a mesma em todas as faixas de porte. É o mesmo padrão do nível municipal: o contexto estadual pesa mais que qualquer característica local.
+
 ## 8. Insights encontrados
 
 ### 8.0 Respostas às perguntas do desafio
 
 | Pergunta | Resposta | Onde |
 |---|---|---|
-| Quais fatores mais impactam a alfabetização? | UF (efeito institucional, não econômico), regressão à média da taxa, esforço exigido e participação. Riqueza e porte quase não pesam | 7.1, 7.3, 7.6 |
-| Quais municípios apresentam maior risco educacional? | 617 em risco crítico para 2025, concentrados na Bahia, Pará e Rio de Janeiro | 10.2, `ranking_2025.csv` |
+| Quais fatores mais impactam a alfabetização? | UF (efeito institucional, não econômico), regressão à média da taxa, esforço exigido e participação. Riqueza e porte quase não pesam. No nível da criança, 77% da diferença está dentro da mesma escola | 7.1, 7.3, 7.6, 8.5 |
+| Quais municípios apresentam maior risco educacional? | 617 em risco crítico para 2025, concentrados na Bahia, Pará e Rio de Janeiro. Além deles, 542 municípios que bateram a meta têm escolas críticas escondidas pela média | 10.2, 8.6 |
 | Quais regiões possuem padrões semelhantes? | 4 perfis (KMeans); o que mais separa é a participação: 59% de falha com participação baixa x 38% com alta | 8.3, `perfis.csv` |
 | Como prever municípios que podem não atingir metas futuras? | Modelo treinado em 2023→2024 aplicado a 2024→2025, com limiar que detecta 81% das falhas | 6, 10.2 |
-| Quais variáveis possuem maior influência nos modelos? | Taxa atual e UF se revezam no 1º lugar nas 8 sementes; depois média de português e esforço | 7.1, 7.2 |
+| Quais variáveis possuem maior influência nos modelos? | Taxa atual e UF se revezam no 1º lugar nas 8 sementes; depois média de português e esforço. No modelo por aluno, UF e média de português, seguidas da rede da escola | 7.1, 7.2, 7.7 |
 
 ### 8.1 O estado pesa mais que o município
 
@@ -328,6 +406,33 @@ O RS caiu, em média, 20 p.p. de 2023 para 2024, enquanto o resto do país subiu
 
 Treinado com esse ano, o modelo aprende "RS = risco". Sem o RS, a AUC cai de 0,78 para 0,75 na validação: parte do sinal era o choque. **Por isso o ranking de 2025 avalia o RS com um modelo que não aprendeu o choque**: o alerta no estado cai de 96% para 38% dos municípios.
 
+### 8.5 A diferença entre as crianças está dentro da escola
+
+![Decomposição da variância](images/escolas_decomposicao.png)
+
+A variação de proficiência entre os 2,1 milhões de alunos de 2024 se divide em quatro partes que somam 100%:
+
+| Onde está a diferença | % |
+|---|---|
+| Entre estados | 9 |
+| Entre municípios da mesma UF | 6 |
+| Entre escolas do mesmo município | 7 |
+| **Entre alunos da mesma escola** | **77** |
+
+O ruído de amostra das escolas pequenas foi descontado. Com o indicador alfabetizado (0/1) no lugar da proficiência, o quadro é o mesmo (85% dentro da escola).
+
+Isso explica o teto da seção 6.5: saber onde a criança estuda ajuda, mas três quartos da diferença estão em coisas que só a escola enxerga, como frequência, avaliação diagnóstica e acompanhamento individual. **É ali que a política precisa chegar, e é ali que os dados abertos não chegam.**
+
+### 8.6 Escolas críticas escondidas pela média
+
+![Dispersão entre escolas](images/escolas_dispersao_municipio.png)
+
+Dentro do mesmo município, a escola do percentil 90 e a do percentil 10 ficam a 28 p.p. de distância (mediana em 3.258 municípios). Escola pequena oscila muito por sorte, então a conta foi refeita em 20 simulações onde só o acaso separa as escolas: ele produziria 16 p.p. A diferença real estimada é de **~23 p.p.**
+
+Nos 2.788 municípios que **bateram a meta de 2024**, há 1.530 escolas municipais com menos de 40% de alfabetizados. O acaso explicaria cerca de 756. **Cerca de 770 escolas críticas reais ficam escondidas pela média de municípios que bateram a meta**, em 542 municípios.
+
+Como o código da escola é mascarado, o produto é a lista de municípios ([`municipios_com_escolas_criticas.csv`](reports/municipios_com_escolas_criticas.csv)), não a de escolas: a secretaria conhece as próprias escolas e consegue localizá-las.
+
 ## 9. Limitações do projeto
 
 ### 9.1 Ancoragem estadual
@@ -348,11 +453,19 @@ Treino em 2023→2024, uma única vez. Não há como separar o que é estrutural
 
 ### 9.5 Cobertura
 
-DF, RR fora; AC só na previsão. Granularidade municipal: desigualdade entre escolas e entre alunos do mesmo município é invisível até o modelo por aluno entrar.
+DF, RR fora; AC só na previsão. O nível 2 cobre 95% dos alunos avaliados: ficam fora os municípios sem base municipal de 2023.
 
 ### 9.6 Socioeconômico limitado
 
 Só PIB por habitante (2021). PIB mede produção, não bem-estar: um município com mineradora tem PIB alto e população pobre. Renda domiciliar, escolaridade materna e pobreza do Censo 2022 ainda não estão completas por município. IDHM foi descartado por ser de 2010.
+
+### 9.7 Escola sem histórico
+
+O INEP mascara o código da escola a cada edição: só 2% das escolas de 2024 têm o mesmo código em 2023. Não dá para usar o resultado da escola no ano anterior, que seria a variável mais forte do modelo por aluno, nem acompanhar uma escola ao longo do tempo. Pelo mesmo motivo, o ranking de escolas críticas não pode ser publicado escola a escola.
+
+### 9.8 Nada da criança antes da prova
+
+Os microdados não têm sexo, cor, idade, renda, frequência nem avaliação anterior. O modelo por aluno só conhece o endereço da criança, e por isso fica limitado (seção 6.5). Com 77% da variação dentro da escola, qualquer ganho real nessa previsão depende de dados que hoje só as redes têm.
 
 ## 10. Aplicação prática para políticas públicas
 
@@ -364,6 +477,7 @@ Só PIB por habitante (2021). PIB mede produção, não bem-estar: um município
 | [`risco_uf_2025.csv`](reports/risco_uf_2025.csv) | Onde a ação precisa ser estadual |
 | [`perfis.csv`](reports/perfis.csv) | Que tipo de apoio mandar para cada grupo |
 | [`ranking_2024_oof.csv`](reports/ranking_2024_oof.csv) | Ranking de 2024 fora da amostra, comparado com o resultado real |
+| [`municipios_com_escolas_criticas.csv`](reports/municipios_com_escolas_criticas.csv) | Municípios que bateram a meta de 2024 mas têm escolas abaixo de 40% |
 
 ### 10.2 Previsão 2025
 
@@ -387,7 +501,9 @@ UFs com mais municípios em alerta: Bahia (99%), Pará (97%), Rio de Janeiro (96
    - Alto desempenho → **documentar e espalhar** o que funciona.
 3. **Agir no estado onde o alerta é quase total.** Na Bahia (99%) e no Pará (97%), negociar município a município é ineficiente: o caminho é a secretaria estadual.
 4. **Acompanhar a participação durante o ano.** É conhecida antes do resultado. Rede abaixo de 85% pode ser sinalizada no mesmo ano letivo.
-5. **Verificar localmente antes de concluir.** O SHAP de cada município mostra de onde veio o score.
+5. **Olhar dentro dos municípios que bateram a meta.** 542 deles têm escolas abaixo de 40% de alfabetizados. A média do município esconde essas escolas, e só a secretaria consegue localizá-las.
+6. **Levar o acompanhamento para dentro da escola.** Três quartos da diferença entre as crianças estão entre colegas da mesma escola: avaliação diagnóstica e acompanhamento individual são onde a política tem mais espaço.
+7. **Verificar localmente antes de concluir.** O SHAP de cada município mostra de onde veio o score.
 
 ### 10.4 Salvaguardas
 
@@ -399,7 +515,8 @@ UFs com mais municípios em alerta: Bahia (99%), Pará (97%), Rio de Janeiro (96
 ## 11. Possíveis evoluções futuras
 
 **Dados**
-- **Modelo por aluno:** levar a tabela `alunos` da Base dos Dados até a Gold e treinar um modelo individual, com validação agrupada por município para não vazar informação da mesma escola entre treino e teste
+- **Dados da criança com as redes:** frequência, avaliação diagnóstica de início de ano e histórico escolar, para o modelo por aluno ir além do teto da seção 6.5
+- **Código de escola estável:** com acesso controlado ao código real (sala segura do INEP), usar o resultado da escola no ano anterior
 - Validar o ranking de 2025 contra o resultado municipal de 2025 assim que for publicado
 - Série maior (2025→2026) para validação temporal real: treinar num par de anos, testar no seguinte
 - Variáveis de política estadual (programa de alfabetização, regime de colaboração), para transformar o "efeito Ceará" em algo acionável
@@ -431,6 +548,8 @@ python -m src.run_pipeline --s3        # Gold direto do S3 da Fase 2 (exige cred
 
 Rodar a partir da raiz do repositório. Cada etapa também roda sozinha (`python -m src.modeling.treinar`, por exemplo). Dados brutos e Gold estão versionados: não precisa de internet nem de AWS.
 
+Para refazer a extração dos microdados por aluno (opcional; o agregado já está no repositório): baixe os zips de [2023](https://download.inep.gov.br/dados_abertos/microdados_avaliacao_da_alfabetizacao_2023.zip) e [2024](https://download.inep.gov.br/dados_abertos/microdados_avaliacao_da_alfabetizacao_2024.zip) para `data/raw/inep/microdados/` e rode `python -m src.preprocessing.microdados_inep`. O site do INEP às vezes recusa download fora do navegador.
+
 ## Estrutura do repositório
 
 Segue a estrutura mínima do enunciado:
@@ -439,18 +558,19 @@ Segue a estrutura mínima do enunciado:
 📁 tech-challenge-fase3
 │
 ├── 📁 data
-│   ├── raw/inep/              CSVs públicos do INEP (Base dos Dados)
+│   ├── raw/inep/              CSVs públicos do INEP e agregado dos microdados por escola
 │   ├── raw/ibge/              localidades, população e PIB
-│   ├── gold/                  star schema da Fase 2 (snapshot)
+│   ├── gold/                  star schema da Fase 2 (snapshot) + fato_escola
 │   └── processed/             bases de treino e previsão (gerado, fora do git)
 ├── 📁 notebooks
 │   ├── 01_analise_exploratoria.ipynb
-│   └── 02_modelagem_e_resultados.ipynb
+│   ├── 02_modelagem_e_resultados.ipynb
+│   └── 03_escolas_e_modelo_aluno.ipynb
 ├── 📁 src
-│   ├── preprocessing          gold.py · base_analitica.py · baixar_dados_ibge.py
-│   ├── modeling               treinar.py · transformadores.py
+│   ├── preprocessing          gold.py · base_analitica.py · baixar_dados_ibge.py · microdados_inep.py · escolas.py
+│   ├── modeling               treinar.py · transformadores.py · modelo_aluno.py
 │   ├── evaluation             interpretar.py · aplicacao.py
-│   ├── visualization          eda.py · estilo.py
+│   ├── visualization          eda.py · estilo.py · desigualdade.py
 │   ├── config.py              anos, caminhos, semente, limiar
 │   └── run_pipeline.py        roda tudo na ordem
 │
@@ -469,27 +589,28 @@ Segue a estrutura mínima do enunciado:
 |---|---|
 | Repositório Git completo | este repositório |
 | Código-fonte organizado | `src/` em preprocessing, modeling, evaluation, visualization |
-| Notebooks ou scripts | `notebooks/` (2, executados) e `src/` |
+| Notebooks ou scripts | `notebooks/` (3, executados) e `src/` |
 | README detalhado | este arquivo, com as 11 seções pedidas |
 | Documentação técnica | [`reports/documentacao_tecnica.md`](reports/documentacao_tecnica.md) |
 | Vídeo executivo | _link após a gravação_ |
 | Pipeline reproduzível | `python -m src.run_pipeline`, conferido em ambiente limpo |
-| Análises e visualizações | `images/` (13 gráficos) e `reports/` |
+| Análises e visualizações | `images/` (18 gráficos) e `reports/` |
 
 ## Versionamento
 
-Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
+Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
 
 ## Créditos
 
 Projeto individual de portfólio, a partir do Tech Challenge da Fase 3 (FIAP Pós Tech, AI Scientist), feito em grupo.
 
-- **Leonardo Azevedo** — pipeline da Fase 2 (AWS), reconstrução da Gold, modelagem, previsão 2025 e documentação
+- **Leonardo Azevedo** — pipeline da Fase 2 (AWS), reconstrução da Gold, modelagem, previsão 2025, microdados por aluno e documentação
 - **Fernanda** — versão do grupo em [fernanda161082/tech-challenge-fase3](https://github.com/fernanda161082/tech-challenge-fase3). O enriquecimento com IBGE, o script de download e a hipótese da participação como proxy de gestão vêm desse trabalho.
 
 ## Fontes
 
 - INEP. Indicador Criança Alfabetizada e metas municipais, via [Base dos Dados](https://basedosdados.org/dataset/br-inep-avaliacao-alfabetizacao)
+- INEP. [Microdados da Avaliação da Alfabetização](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados) (2023 e 2024)
 - IBGE. [API de Localidades](https://servicodados.ibge.gov.br/api/docs/localidades) e [SIDRA](https://sidra.ibge.gov.br) (agregados 6579 e 5938)
 - Queda do RS em 2024 atribuída às enchentes pelo MEC: [Lex Legal, 12/07/2025](https://lexlegal.com.br/?p=27209)
 

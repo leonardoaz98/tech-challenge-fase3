@@ -25,6 +25,21 @@ Complementa o README com o que um revisor técnico precisa para auditar o projet
 
 **Dimensões:** `dim_municipio` (id, UF), `dim_uf` (UF, região), `dim_tempo` (ano, medido/só meta), `dim_nivel` (nível, descrição, faixa).
 
+**`fato_escola`** — grão `ano + id_municipio + id_escola + rede`, 79.273 linhas, a partir dos microdados por aluno
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `id_escola` | texto | Código da escola, **mascarado pelo INEP a cada edição** |
+| `rede` | inteiro | 2 = estadual, 3 = municipal, 4 = federal |
+| `alunos_registrados` | inteiro | Alunos do 2º ano registrados |
+| `alunos_com_resultado` | inteiro | Alunos com proficiência (presentes) |
+| `alfabetizados_743` | inteiro | Alunos com proficiência ≥ 743 |
+| `alfabetizados_flag` | inteiro | Alunos com `IN_ALFABETIZADO = 1` (igual ao anterior em 100% dos casos) |
+| `soma_peso` / `soma_peso_alfabetizados` | float | Soma do peso amostral do INEP dos avaliados / dos alfabetizados |
+| `media_proficiencia` / `desvio_proficiencia` | float | Média e desvio da proficiência na escola |
+| `participacao` | float | `alunos_com_resultado / alunos_registrados × 100` |
+| `taxa_escola` | float | `soma_peso_alfabetizados / soma_peso × 100` (mesma conta do indicador oficial) |
+
 ### 1.2 Base analítica (`data/processed/`, gerada)
 
 Uma linha por município. `base_treino` (2023 → 2024) e `base_previsao` (2024 → 2025) têm as mesmas colunas.
@@ -68,6 +83,15 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | 15 | AC avaliado sem efeito de UF | Sem dado de 2024 no treino | `handle_unknown="ignore"` |
 | 16 | KMeans em taxa, participação, esforço | Perfis acionáveis de gestão | k = 4 pela silhueta (0,361) |
 | 17 | Faixas ancoradas no limiar | Coerência entre alerta e modelo | Validadas fora da amostra: 16% a 84% de falha |
+| 18 | Microdados direto do INEP, não do BigQuery | Dado aberto, sem credencial; quem clona consegue refazer | Mesma fonte da tabela `alunos` da Base dos Dados |
+| 19 | Agregar alunos por escola | Sem variável da criança, o modelo por aluno e o modelo nas contagens por escola são idênticos | 79 mil linhas em vez de 3,9 milhões |
+| 20 | Taxa da escola com o peso do INEP | É a conta do indicador oficial | Reproduz o oficial com erro médio de 0,03 p.p. |
+| 21 | Sem histórico de escola | Código mascarado a cada edição | 2% das escolas de 2024 com o mesmo código em 2023 |
+| 22 | Participação da escola fora do modelo por aluno | Só é conhecida no dia da prova | — |
+| 23 | `GroupKFold` por município no modelo por aluno | Escolas vizinhas no treino inflariam a AUC | — |
+| 24 | Tetos com o resultado real | Medir quanto ainda cabe melhorar com dados de escola | Teto da escola: AUC 0,736 |
+| 25 | Simular o acaso na dispersão entre escolas | Escola pequena oscila por sorte | Metade das escolas críticas observadas seria acaso |
+| 26 | Lista por município, não por escola | O código é fictício; a secretaria localiza as próprias escolas | `municipios_com_escolas_criticas.csv` |
 
 ---
 
@@ -82,7 +106,11 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | `src/modeling/treinar.py` | `base_treino` | `models/modelo.joblib`, `reports/resultado_modelo.json`, `images/modelo_precisao_recall.png` |
 | `src/evaluation/interpretar.py` | modelo + `base_treino` | `images/interp_*.png`, `reports/interpretabilidade.json` |
 | `src/evaluation/aplicacao.py` | modelo + as duas bases | `reports/ranking_2025.csv`, `ranking_2024_oof.csv`, `perfis.csv`, `risco_uf_2025.csv`, `aplicacao.json`, `images/aplicacao_*.png` |
-| `src/run_pipeline.py` | — | roda tudo na ordem |
+| `src/preprocessing/microdados_inep.py` | zips do INEP em `data/raw/inep/microdados/` (fora do git) | `data/raw/inep/alunos_por_escola.csv`, `reports/perfil_microdados.json` |
+| `src/preprocessing/escolas.py` | `alunos_por_escola.csv` + Gold | `data/gold/fato_escola.parquet`, `reports/validacao_microdados.json` (para se não reproduzir o indicador oficial) |
+| `src/visualization/desigualdade.py` | `fato_escola` | `images/escolas_*.png`, `reports/escolas_resumo.json`, `reports/municipios_com_escolas_criticas.csv` |
+| `src/modeling/modelo_aluno.py` | `fato_escola` + `base_treino` | `models/modelo_aluno.joblib`, `reports/resultado_modelo_aluno.json`, `images/aluno_*.png` |
+| `src/run_pipeline.py` | — | roda tudo na ordem (a extração dos microdados é à parte) |
 
 Parâmetros compartilhados (anos, semente, proporção de teste, folds, recall mínimo) ficam em `src/config.py`.
 
@@ -103,6 +131,7 @@ Parâmetros compartilhados (anos, semente, proporção de teste, folds, recall m
 | Replicabilidade | Semente 42 em tudo; versões fixas; dados versionados; teste de 8 sementes |
 | Feature importance | `permutation_importance` + coeficientes |
 | SHAP | `shap.LinearExplainer`, resumo e por município |
+| Validação sem vazamento entre escolas vizinhas (modelo por aluno) | `GroupKFold` por município |
 
 ---
 
@@ -114,7 +143,8 @@ python -m src.run_pipeline
 ```
 
 - Conferido em ambiente limpo (venv novo, clone novo): os relatórios em `reports/` saem **idênticos byte a byte**. Só os PNG mudam nos metadados de renderização.
-- Tempo: ~1min40s com busca de hiperparâmetros.
+- Tempo: ~2 min com busca de hiperparâmetros, incluindo o nível de escola e aluno.
+- A extração dos microdados (`microdados_inep.py`) fica fora do `run_pipeline`: depende de baixar ~40 MB do INEP, e o resultado já está versionado.
 - Sem internet e sem AWS: dados brutos e Gold estão no repositório.
 - Com AWS: `python -m src.run_pipeline --s3` lê a Gold do data lake da Fase 2.
 
@@ -133,6 +163,10 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `feat/interpretabilidade` | Permutação, estabilidade, SHAP |
 | `feat/previsao-2025` | Ranking 2025, score fora da amostra, perfis, notebook 02 |
 | `docs/readme` | README e documentação técnica |
+| `feat/microdados-alunos` | Extração dos microdados do INEP, `fato_escola`, validação contra o indicador oficial |
+| `feat/desigualdade-escolas` | Decomposição da variância, dispersão entre escolas, escolas críticas escondidas |
+| `feat/modelo-aluno` | Modelo por aluno, tetos, notebook 03 |
+| `docs/readme-aluno` | README e documentação técnica com o nível de aluno |
 
 Cada branch entrou na `main` por pull request.
 
