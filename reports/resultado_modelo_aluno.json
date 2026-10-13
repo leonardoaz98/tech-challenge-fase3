@@ -3,52 +3,195 @@
   "escolas": 40088,
   "municipios": 5232,
   "alunos_avaliados_cobertos_pct": 95.3,
-  "comparacao": [
+  "municipios_treino": 3924,
+  "municipios_teste": 1308,
+  "busca_em_grade": [
     {
-      "modelo": "baseline (taxa nacional)",
-      "auc": 0.5,
-      "tipo": "piso"
+      "modelo": "logistica_so_municipio",
+      "params": {
+        "C": 0.01
+      },
+      "auc_cv": 0.6446,
+      "desvio": 0.0133
     },
     {
       "modelo": "logistica_so_municipio",
-      "auc": 0.6502,
-      "tipo": "modelo"
+      "params": {
+        "C": 0.1
+      },
+      "auc_cv": 0.6446,
+      "desvio": 0.0132
+    },
+    {
+      "modelo": "logistica_so_municipio",
+      "params": {
+        "C": 1
+      },
+      "auc_cv": 0.6446,
+      "desvio": 0.0132
+    },
+    {
+      "modelo": "logistica_so_municipio",
+      "params": {
+        "C": 10
+      },
+      "auc_cv": 0.6446,
+      "desvio": 0.0132
     },
     {
       "modelo": "logistica_municipio_e_escola",
-      "auc": 0.6549,
-      "tipo": "modelo"
+      "params": {
+        "C": 0.01
+      },
+      "auc_cv": 0.6517,
+      "desvio": 0.0111
+    },
+    {
+      "modelo": "logistica_municipio_e_escola",
+      "params": {
+        "C": 0.1
+      },
+      "auc_cv": 0.6516,
+      "desvio": 0.011
+    },
+    {
+      "modelo": "logistica_municipio_e_escola",
+      "params": {
+        "C": 1
+      },
+      "auc_cv": 0.6516,
+      "desvio": 0.011
+    },
+    {
+      "modelo": "logistica_municipio_e_escola",
+      "params": {
+        "C": 10
+      },
+      "auc_cv": 0.6516,
+      "desvio": 0.011
     },
     {
       "modelo": "boosting_municipio_e_escola",
-      "auc": 0.6553,
-      "tipo": "modelo"
+      "params": {
+        "learning_rate": 0.05,
+        "max_leaf_nodes": 15
+      },
+      "auc_cv": 0.6501,
+      "desvio": 0.0142
+    },
+    {
+      "modelo": "boosting_municipio_e_escola",
+      "params": {
+        "learning_rate": 0.05,
+        "max_leaf_nodes": 31
+      },
+      "auc_cv": 0.652,
+      "desvio": 0.0136
+    },
+    {
+      "modelo": "boosting_municipio_e_escola",
+      "params": {
+        "learning_rate": 0.1,
+        "max_leaf_nodes": 15
+      },
+      "auc_cv": 0.6509,
+      "desvio": 0.0133
+    },
+    {
+      "modelo": "boosting_municipio_e_escola",
+      "params": {
+        "learning_rate": 0.1,
+        "max_leaf_nodes": 31
+      },
+      "auc_cv": 0.6515,
+      "desvio": 0.0145
+    }
+  ],
+  "combinacoes_testadas": 12,
+  "comparacao_teste": [
+    {
+      "modelo": "baseline (taxa nacional)",
+      "auc_cv": 0.5,
+      "auc_teste": 0.5,
+      "tipo": "piso",
+      "params": NaN
+    },
+    {
+      "modelo": "logistica_so_municipio",
+      "auc_cv": 0.6446,
+      "auc_teste": 0.6618,
+      "tipo": "modelo",
+      "params": {
+        "C": 0.01
+      }
+    },
+    {
+      "modelo": "logistica_municipio_e_escola",
+      "auc_cv": 0.6517,
+      "auc_teste": 0.6632,
+      "tipo": "modelo",
+      "params": {
+        "C": 0.01
+      }
+    },
+    {
+      "modelo": "boosting_municipio_e_escola",
+      "auc_cv": 0.652,
+      "auc_teste": 0.6648,
+      "tipo": "modelo",
+      "params": {
+        "learning_rate": 0.05,
+        "max_leaf_nodes": 31
+      }
     },
     {
       "modelo": "teto: taxa real do municipio",
-      "auc": 0.675,
-      "tipo": "teto"
+      "auc_cv": NaN,
+      "auc_teste": 0.685,
+      "tipo": "teto",
+      "params": NaN
     },
     {
       "modelo": "teto: taxa real da escola",
-      "auc": 0.7359,
-      "tipo": "teto"
+      "auc_cv": NaN,
+      "auc_teste": 0.7405,
+      "tipo": "teto",
+      "params": NaN
     }
   ],
   "modelo_escolhido": "logistica_municipio_e_escola",
-  "ganho_das_variaveis_de_escola": 0.0046,
-  "pct_do_caminho_ate_o_teto": 65.7,
-  "importancia": {
-    "sigla_uf": 0.0311,
-    "media_portugues": 0.0287,
-    "rede_escola": 0.0087,
-    "regiao": 0.0063,
-    "esforco_exigido": 0.0059,
-    "participacao": 0.0053,
-    "porte_municipio": 0.0028,
-    "taxa_atual": 0.0016,
-    "log_pib_per_capita": 0.0009,
-    "log_populacao": 0.0006,
-    "log_alunos_escola": 0.0002
+  "parametros": {
+    "C": 0.01
+  },
+  "auc_cv": 0.6517,
+  "auc_teste": 0.6632,
+  "gap_cv_teste": -0.0115,
+  "ganho_das_variaveis_de_escola_teste": 0.0013,
+  "pct_do_caminho_ate_o_teto": 67.8,
+  "importancia_permutacao": {
+    "sigla_uf": 0.0313,
+    "media_portugues": 0.0281,
+    "regiao": 0.0054,
+    "participacao": 0.005,
+    "esforco_exigido": 0.0034,
+    "rede_escola": 0.0033,
+    "porte_municipio": 0.0025,
+    "taxa_atual": 0.0018,
+    "log_pib_per_capita": 0.001,
+    "log_alunos_escola": 0.0001,
+    "log_populacao": -0.0002
+  },
+  "shap_medio_por_variavel": {
+    "sigla_uf": 0.4065,
+    "media_portugues": 0.2127,
+    "regiao": 0.1492,
+    "porte_municipio": 0.1177,
+    "participacao": 0.0835,
+    "esforco_exigido": 0.0723,
+    "rede_escola": 0.0671,
+    "taxa_atual": 0.0667,
+    "log_populacao": 0.0416,
+    "log_pib_per_capita": 0.0409,
+    "log_alunos_escola": 0.0087
   }
 }
