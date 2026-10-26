@@ -66,6 +66,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from src.config import (IMAGES, MODELS, PARTICOES_CV, PROCESSED,
                         PROPORCAO_TESTE, REPORTS, SEMENTE)
 from src.modeling.transformadores import LimitarFaixa
+from src.preprocessing.funil import Funil, registrar
 from src.preprocessing.gold import carregar
 from src.visualization import estilo
 from src.visualization.estilo import plt
@@ -82,14 +83,25 @@ TOLERANCIA_INTERPRETAVEL = 0.005
 
 def montar_base() -> pd.DataFrame:
     """Duas linhas por escola (alfabetizados e nao), com o peso do grupo."""
+    funil = Funil("alunos com resultado")
     e = carregar("fato_escola")
-    e = e[(e.ano == ANO) & e.rede.isin(REDES) & (e.soma_peso > 0)].copy()
+    e = e[e.ano == ANO]
+    funil.passo(f"avaliados em {ANO}, todas as redes", e.alunos_com_resultado.sum())
+    e = e[e.rede.isin(REDES)]
+    funil.passo("redes estadual e municipal", e.alunos_com_resultado.sum(),
+                "rede federal: poucas escolas, fora da politica municipal")
+    e = e[e.soma_peso > 0].copy()
+    funil.passo("escolas com peso amostral", e.alunos_com_resultado.sum(),
+                "escola sem peso do INEP nao entra na taxa oficial")
     # a participacao da escola so e conhecida no dia da prova: fica fora
     e = e.rename(columns={"participacao": "participacao_escola"})
     mun = pd.read_parquet(PROCESSED / "base_treino.parquet")
     mun = mun[NUM_MUNICIPIO + CAT_MUNICIPIO + ["nome_municipio"]]
     total_alunos = e.alunos_com_resultado.sum()
     e = e.merge(mun, left_on="id_municipio", right_index=True, how="inner")
+    funil.passo("municipio na base de treino", e.alunos_com_resultado.sum(),
+                "municipio fora da base municipal (ver secao 1_treino)")
+    registrar("3_aluno", funil)
     e["rede_escola"] = e.rede.map(REDES)
     e["log_alunos_escola"] = np.log1p(e.alunos_registrados)
     e["taxa_escola_real"] = e.soma_peso_alfabetizados / e.soma_peso
