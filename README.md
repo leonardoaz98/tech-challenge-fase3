@@ -109,7 +109,7 @@ Fora do modelo, com motivo:
 | Nulos nas features | 0 | 0 |
 | Não atingiram | 46,7% | — |
 
-Fora: **DF** (não tem rede municipal) e **RR** (sem rede municipal na avaliação). O **AC** não tem dado de 2024 no treino, mas aparece em 2025; seus 22 municípios são avaliados sem o efeito de UF. 216 municípios de 2023 ficaram fora por não ter meta de 2024.
+Fora: **DF** (não tem rede municipal) e **RR** (sem rede municipal na avaliação). O **AC** não tem dado de 2024 no treino, mas aparece em 2025; seus 22 municípios são avaliados sem o efeito de UF. 216 municípios de 2023 ficaram fora do treino: 52 sem resultado em 2024 e 164 sem meta de 2024. Cada descarte do projeto, com contagem e motivo, está em [`reports/funil.json`](reports/funil.json).
 
 ### 3.5 Microdados por aluno
 
@@ -471,7 +471,7 @@ A taxa varia com desvio de 16,6 p.p. de um ano para o outro; a meta pede, na med
 
 ### 9.3 Mudança de distribuição em 2025
 
-As metas de 2025 seguem a trajetória original e **não foram recalculadas** depois do resultado de 2024. Quem caiu em 2024 agora precisa subir muito: **36% dos municípios têm esforço exigido acima do maior valor visto no treino** (7,2 p.p.). O `LimitarFaixa` impede extrapolação, mas o modelo nunca viu esse cenário. O ranking marca esses casos na coluna `esforco_acima_do_treino`.
+As metas de 2025 seguem a trajetória original e **não foram recalculadas** depois do resultado de 2024. Quem caiu em 2024 agora precisa subir muito: **36% dos municípios têm esforço exigido acima do maior valor visto no treino** (7,2 p.p.). O `LimitarFaixa` impede extrapolação, mas o modelo nunca viu esse cenário. O ranking marca esses casos na coluna `esforco_acima_do_treino`. O monitoramento de deriva ([`reports/drift.json`](reports/drift.json)) mede isso a cada execução: `esforco_exigido` é a única variável em alerta (PSI 1,26; acima de 0,25 é alerta); todas as outras estão estáveis.
 
 ### 9.4 Uma única transição
 
@@ -555,7 +555,7 @@ UFs com mais municípios em alerta: Bahia (99%), Pará (97%), Rio de Janeiro (96
 
 **Engenharia**
 - Base analítica como tabela da Gold na AWS, retreino automático a cada publicação do INEP
-- Monitoramento de drift (a mudança de 2025 da seção 9.3 seria o primeiro alerta)
+- Alerta automático (e-mail ou issue) quando o monitoramento de deriva sair de "estável"
 - Consulta por município no dashboard Streamlit da Fase 2, com o SHAP de cada previsão
 
 ---
@@ -573,7 +573,24 @@ python -m src.run_pipeline --rapido    # sem busca de hiperparâmetros
 
 Rodar a partir da raiz do repositório. Cada etapa também roda sozinha (`python -m src.modeling.treinar`, por exemplo). Dados brutos e Gold estão versionados: não precisa de internet nem de AWS.
 
+Cada execução grava o log completo em `logs/` e acrescenta uma linha em [`reports/execucoes.jsonl`](reports/execucoes.jsonl). Para conferir que os resultados batem com os publicados: `python -m src.checar_resultados`.
+
 Para refazer a extração dos microdados por aluno (opcional; o agregado já está no repositório): baixe os zips de [2023](https://download.inep.gov.br/dados_abertos/microdados_avaliacao_da_alfabetizacao_2023.zip) e [2024](https://download.inep.gov.br/dados_abertos/microdados_avaliacao_da_alfabetizacao_2024.zip) para `data/raw/inep/microdados/` e rode `python -m src.preprocessing.microdados_inep`. O site do INEP às vezes recusa download fora do navegador.
+
+## Qualidade, rastreabilidade e monitoramento
+
+A avaliação da Fase 2 apontou quatro problemas na pipeline de dados. Cada um tem uma resposta neste repositório:
+
+| Problema na Fase 2 | O que este projeto faz | Onde |
+|---|---|---|
+| Gold gravada com um esquema e lida com outro; sequência do README quebrava | Esquema de cada tabela escrito uma vez e conferido ao gravar, ao ler e contra a documentação técnica. A cada pull request, o GitHub Actions roda o pipeline do zero numa máquina limpa e compara os resultados com a referência | [`contrato_gold.py`](src/preprocessing/contrato_gold.py), [`.github/workflows/pipeline.yml`](.github/workflows/pipeline.yml), [`checar_resultados.py`](src/checar_resultados.py) |
+| Carga com sobrescrita, sem histórico | Cada execução acrescenta um registro: data, commit, versões, hash dos dados de entrada, tempo por etapa, métricas. Nada é sobrescrito | [`reports/execucoes.jsonl`](reports/execucoes.jsonl) |
+| Deduplicação sem critério | Nenhum descarte silencioso: duplicata para o pipeline, e todo filtro registra quantas linhas saíram e por quê | [`reports/funil.json`](reports/funil.json) |
+| Monitoramento e custo sem evidência | Logger padronizado gravando em arquivo; deriva entre treino e previsão medida a cada execução; tempo e custo no registro | `logs/`, [`reports/drift.json`](reports/drift.json) |
+
+**O que para o pipeline e o que só avisa.** Erro de dado (coluna faltando, tipo errado, chave duplicada, microdado que não reproduz o indicador oficial) para a execução. Deriva não para: é um aviso para quem usa o ranking, registrado em `drift.json`.
+
+**Custo (FinOps).** Tudo roda localmente em ~2 a 3 minutos, com ~10 MB de dados: custo de infraestrutura zero, registrado em cada execução (`recursos.custo_estimado_brl`). O GitHub Actions usa a cota gratuita de repositório público. A nuvem não entrou nesta fase porque o volume não justifica: o maior insumo, os microdados por aluno, vira um agregado de 79 mil linhas.
 
 ## Estrutura do repositório
 
@@ -592,21 +609,23 @@ Segue a estrutura mínima do enunciado:
 │   ├── 02_modelagem_e_resultados.ipynb
 │   └── 03_escolas_e_modelo_aluno.ipynb
 ├── 📁 src
-│   ├── preprocessing          gold.py · base_analitica.py · baixar_dados_ibge.py · microdados_inep.py · escolas.py
+│   ├── preprocessing          gold.py · contrato_gold.py · base_analitica.py · funil.py · baixar_dados_ibge.py · microdados_inep.py · escolas.py
 │   ├── modeling               treinar.py · transformadores.py · modelo_aluno.py
-│   ├── evaluation             interpretar.py · aplicacao.py
+│   ├── evaluation             interpretar.py · aplicacao.py · drift.py
 │   ├── visualization          eda.py · estilo.py · desigualdade.py
 │   ├── config.py              anos, caminhos, semente, limiar
-│   └── run_pipeline.py        roda tudo na ordem
+│   ├── logger.py              logger padronizado (terminal + arquivo)
+│   ├── checar_resultados.py   compara as métricas com a referência
+│   └── run_pipeline.py        roda tudo na ordem e registra a execução
 │
-├── 📁 reports                 métricas (JSON), rankings (CSV), documentação técnica
+├── 📁 reports                 métricas (JSON), rankings (CSV), funil, deriva, registro de execuções, documentação técnica
 ├── 📁 images                  gráficos usados no README e no vídeo
 ├── requirements.txt
 ├── README.md
 └── .gitignore
 ```
 
-`models/` é criada pelo pipeline e fica fora do git. `LICENSE` (MIT) é um extra: o enunciado define a estrutura **mínima**.
+`models/` e `logs/` são criadas pelo pipeline e ficam fora do git. `.github/workflows/` guarda o teste automático. `LICENSE` (MIT) é um extra: o enunciado define a estrutura **mínima**.
 
 ## Entregáveis
 
@@ -618,12 +637,12 @@ Segue a estrutura mínima do enunciado:
 | README detalhado | este arquivo, com as 11 seções pedidas |
 | Documentação técnica | [`reports/documentacao_tecnica.md`](reports/documentacao_tecnica.md) |
 | Vídeo executivo | _link após a gravação_ |
-| Pipeline reproduzível | `python -m src.run_pipeline`, conferido em ambiente limpo |
+| Pipeline reproduzível | `python -m src.run_pipeline`, conferido do zero pelo GitHub Actions a cada pull request |
 | Análises e visualizações | `images/` (19 gráficos) e `reports/` |
 
 ## Versionamento
 
-Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
+Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`, `fix/contrato-gold`, `fix/descartes-com-regra`, `feat/registro-execucao`, `feat/monitoramento-deriva`, `ci/pipeline-github-actions`, `docs/qualidade-e-monitoramento`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
 
 ## Autor
 

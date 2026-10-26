@@ -103,6 +103,13 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | 26 | Lista por município, não por escola | O código é fictício; a secretaria localiza as próprias escolas | `municipios_com_escolas_criticas.csv` |
 | 27 | Busca em grade com AUC ponderada pelo peso dos alunos | Cada linha representa um grupo de alunos; o scorer padrão ignoraria o peso | 12 combinações; validação 0,652, teste 0,663 |
 | 28 | Semente fixa antes de cada SHAP | O SHAP sorteia a amostra de fundo e a posição dos pontos | Gráficos idênticos a cada execução |
+| 29 | Esquema da Gold num contrato único | Na Fase 2 a Gold gravada divergiu da lida pelas views | Conferido ao gravar, ao ler e contra este documento |
+| 30 | Leitura do S3 retirada | Sem acesso ao bucket não havia como testar; caminho documentado e não executado não fica | Tudo roda do snapshot versionado |
+| 31 | Duplicata para o pipeline em vez de `drop_duplicates` | Ficar com a primeira linha sem critério esconde erro de fonte | 0 duplicatas hoje nos três CSVs do IBGE |
+| 32 | Funil de descartes | Toda linha que sai precisa de contagem e motivo | 216 municípios fora do treino = 52 sem resultado de 2024 + 164 sem meta |
+| 33 | Registro acumulado, não sobrescrito | Histórico de cada execução (commit, versões, dados, métricas) | `reports/execucoes.jsonl` |
+| 34 | Deriva avisa, não para | Mudança de distribuição é informação para o gestor, não erro de dado | `esforco_exigido` em alerta (PSI 1,26), demais estáveis |
+| 35 | Teste automático compara métricas com tolerância | Máquinas diferentes mudam pixels e última casa decimal, não a conclusão | `referencia_metricas.json` |
 
 ---
 
@@ -122,7 +129,10 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | `src/preprocessing/escolas.py` | `alunos_por_escola.csv` + Gold | `data/gold/fato_escola.parquet`, `reports/validacao_microdados.json` (para se não reproduzir o indicador oficial) |
 | `src/visualization/desigualdade.py` | `fato_escola` | `images/escolas_*.png`, `reports/escolas_resumo.json`, `reports/municipios_com_escolas_criticas.csv` |
 | `src/modeling/modelo_aluno.py` | `fato_escola` + `base_treino` | `models/modelo_aluno.joblib`, `reports/resultado_modelo_aluno.json`, `images/aluno_*.png` (comparação, permutação e SHAP) |
-| `src/run_pipeline.py` | — | roda tudo na ordem (a extração dos microdados é à parte) |
+| `src/preprocessing/funil.py` | chamado por `base_analitica.py` e `modelo_aluno.py` | `reports/funil.json` (linhas que entram e saem de cada filtro, com motivo) |
+| `src/evaluation/drift.py` | as duas bases | `reports/drift.json` (PSI e % fora da faixa do treino por variável) |
+| `src/run_pipeline.py` | — | roda tudo na ordem (a extração dos microdados é à parte); grava `logs/pipeline_<data>.log` e acrescenta uma linha em `reports/execucoes.jsonl` |
+| `src/checar_resultados.py` | `reports/*.json` + `reports/referencia_metricas.json` | sai com erro se alguma métrica sair da tolerância |
 
 Parâmetros compartilhados (anos, semente, proporção de teste, folds, recall mínimo) ficam em `src/config.py`.
 
@@ -140,7 +150,8 @@ Parâmetros compartilhados (anos, semente, proporção de teste, folds, recall m
 | Treino, validação e teste | 75/25 estratificado + `StratifiedKFold(5)` no treino |
 | Otimização | `GridSearchCV` (23 combinações × 5 folds) no municipal; busca em grade ponderada (12 × 5) no modelo por aluno |
 | Redução de overfitting | Regularização na grade; gap CV × teste dentro do desvio |
-| Replicabilidade | Semente 42 em tudo; versões fixas; dados versionados; teste de 8 sementes |
+| Replicabilidade | Semente 42 em tudo; versões fixas; dados versionados; teste de 8 sementes; GitHub Actions a cada pull request |
+| Monitoramento | `drift.py` (deriva treino × previsão) e `execucoes.jsonl` (histórico de métricas) |
 | Feature importance | `permutation_importance` + coeficientes |
 | SHAP | `shap.LinearExplainer`, resumo e por município |
 | Treino, validação e teste no modelo por aluno | `GroupShuffleSplit` (25% dos municípios no teste) + `GroupKFold(5)` no treino |
@@ -155,7 +166,9 @@ pip install -r requirements.txt
 python -m src.run_pipeline
 ```
 
-- Conferido em ambiente limpo (venv novo, clone novo) e em duas execuções seguidas: `reports/` e `images/` saem **idênticos byte a byte**, inclusive os gráficos SHAP.
+- Conferido em ambiente limpo (venv novo, clone novo) e em duas execuções seguidas: `reports/` e `images/` saem **idênticos byte a byte** na mesma máquina, inclusive os gráficos SHAP.
+- Em outra máquina, os gráficos podem mudar alguns pixels (fontes do sistema) e as métricas, a última casa decimal. Por isso o teste automático compara as métricas principais com tolerância (`reports/referencia_metricas.json`), e não os arquivos byte a byte.
+- Teste automático: `.github/workflows/pipeline.yml` roda, a cada pull request e a cada push na `main`, o contrato da Gold, o pipeline completo e `checar_resultados.py`. O log e o registro da execução ficam salvos como artefato do Actions.
 - Tempo: ~3 min com as duas buscas de hiperparâmetros (municipal e por aluno).
 - A extração dos microdados (`microdados_inep.py`) fica fora do `run_pipeline`: depende de baixar ~40 MB do INEP, e o resultado já está versionado.
 - Sem internet e sem AWS: dados brutos e Gold estão no repositório.
@@ -181,6 +194,12 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `docs/readme-aluno` | README e documentação técnica com o nível de aluno |
 | `fix/modelo-aluno-teste-e-busca` | Teste separado por município, busca em grade e SHAP no modelo por aluno; SHAP reprodutível |
 | `refactor/download-ibge` | Script de download do IBGE reescrito |
+| `fix/contrato-gold` | Contrato de esquema da Gold conferido ao gravar, ao ler e contra a documentação; leitura do S3 retirada |
+| `fix/descartes-com-regra` | Duplicata no IBGE para o pipeline; funil de descartes com contagem e motivo |
+| `feat/registro-execucao` | Logger padronizado com arquivo; registro acumulado de cada execução |
+| `feat/monitoramento-deriva` | PSI por variável entre treino e previsão |
+| `ci/pipeline-github-actions` | Pipeline do zero a cada pull request, com comparação das métricas |
+| `docs/qualidade-e-monitoramento` | README e documentação técnica com qualidade, rastreabilidade e custo |
 
 Cada branch entrou na `main` por pull request.
 
