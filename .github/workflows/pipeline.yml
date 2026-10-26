@@ -1,0 +1,48 @@
+# Roda o pipeline do zero numa maquina limpa a cada pull request e a cada
+# push na main. Prova que a sequencia do README funciona e que os
+# resultados nao mudaram sem querer.
+name: pipeline
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  reproduzir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Instalar dependencias (versoes fixas)
+        run: pip install -r requirements.txt
+
+      - name: Contrato da Gold versionada e da documentacao
+        run: python -m src.preprocessing.contrato_gold
+
+      - name: Pipeline completo, como no README
+        run: python -m src.run_pipeline
+
+      - name: Contrato da Gold regerada
+        run: python -m src.preprocessing.contrato_gold
+
+      - name: Resultados batem com a referencia
+        run: python -m src.checar_resultados
+
+      - name: Guardar log e registro da execucao
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: execucao-${{ github.run_number }}
+          path: |
+            logs/
+            reports/execucoes.jsonl
+            reports/drift.json
+            reports/funil.json
