@@ -40,7 +40,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from src.config import GOLD, IMAGES, RAW_IBGE, REDE_MUNICIPAL, REPORTS
+from src.config import IMAGES, RAW_IBGE, REDE_MUNICIPAL, REPORTS
 from src.preprocessing.gold import CODIGO_UF, carregar
 from src.visualization import estilo
 from src.visualization.estilo import plt
@@ -52,7 +52,7 @@ REDES = {2: "Estadual", 3: "Municipal", 4: "Federal"}
 
 
 def carregar_escolas() -> pd.DataFrame:
-    e = pd.read_parquet(GOLD / "fato_escola.parquet")
+    e = carregar("fato_escola")
     e = e[(e.ano == ANO) & (e.soma_peso > 0)].copy()
     e["sigla_uf"] = e.id_municipio.str[:2].map(CODIGO_UF)
     e["p"] = e.soma_peso_alfabetizados / e.soma_peso

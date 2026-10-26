@@ -23,7 +23,16 @@ Complementa o README com o que um revisor técnico precisa para auditar o projet
 | `meta_atingida` | 0/1 | 1 se `taxa_realizada ≥ meta` |
 | `nivel_alfabetizacao` | 0–5 | Faixa da taxa (Crítico a Muito alto) |
 
-**Dimensões:** `dim_municipio` (id, UF), `dim_uf` (UF, região), `dim_tempo` (ano, medido/só meta), `dim_nivel` (nível, descrição, faixa).
+**Dimensões**
+
+| Tabela | Chave | Colunas |
+|---|---|---|
+| `dim_municipio` | `id_municipio` | `id_municipio`, `sigla_uf` (o nome do município vem do IBGE, na base analítica) |
+| `dim_uf` | `sigla_uf` | `sigla_uf`, `regiao` |
+| `dim_tempo` | `ano` | `ano`, `tipo` (`medido` ou `so_meta`) |
+| `dim_nivel` | `nivel_alfabetizacao` | `nivel_alfabetizacao`, `descricao`, `faixa` |
+
+O esquema de todas as tabelas da Gold está em `src/preprocessing/contrato_gold.py`, conferido ao gravar, ao ler e contra este dicionário.
 
 **`fato_escola`** — grão `ano + id_municipio + id_escola + rede`, 79.273 linhas, a partir dos microdados por aluno
 
@@ -101,7 +110,8 @@ Cada decisão com o motivo e a evidência que a sustenta.
 
 | Script | Entrada | Saída |
 |---|---|---|
-| `src/preprocessing/gold.py` | `data/raw/inep/*.csv` | `data/gold/*.parquet` |
+| `src/preprocessing/gold.py` | `data/raw/inep/*.csv` | `data/gold/*.parquet` (para se fugir do contrato) |
+| `src/preprocessing/contrato_gold.py` | `data/gold/*.parquet` + esta documentação | confere esquema, tipos, chave e dicionário de dados |
 | `src/preprocessing/baixar_dados_ibge.py` | APIs do IBGE | `data/raw/ibge/*.csv` (já versionados) |
 | `src/preprocessing/base_analitica.py` | Gold + IBGE | `data/processed/base_treino.parquet`, `base_previsao.parquet` |
 | `src/visualization/eda.py` | `base_treino` | `images/eda_*.png`, `reports/eda_resumo.json` |
@@ -149,7 +159,6 @@ python -m src.run_pipeline
 - Tempo: ~3 min com as duas buscas de hiperparâmetros (municipal e por aluno).
 - A extração dos microdados (`microdados_inep.py`) fica fora do `run_pipeline`: depende de baixar ~40 MB do INEP, e o resultado já está versionado.
 - Sem internet e sem AWS: dados brutos e Gold estão no repositório.
-- Com AWS: `python -m src.run_pipeline --s3` lê a Gold do data lake da Fase 2.
 
 ---
 

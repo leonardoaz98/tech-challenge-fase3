@@ -3,7 +3,6 @@ Roda o pipeline completo, da Gold ao ranking de 2025.
 
     python -m src.run_pipeline             # tudo, com busca de hiperparametros (~2 min)
     python -m src.run_pipeline --rapido    # sem busca de hiperparametros
-    python -m src.run_pipeline --s3        # le a Gold do S3 da Fase 2 (exige AWS)
 
 Rodar a partir da raiz do repositorio.
 """
@@ -32,14 +31,10 @@ ETAPAS = [
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--rapido", action="store_true")
-    parser.add_argument("--s3", action="store_true")
     args = parser.parse_args()
 
     env = dict(os.environ, PYTHONWARNINGS="ignore")
     etapas = list(ETAPAS)
-    if args.s3:
-        env["GOLD_FONTE"] = "s3"
-        etapas = etapas[1:]  # a Gold ja existe no S3
     if args.rapido:
         etapas = [(n, m, ["--sem-busca"] if m.endswith("treinar") else a)
                   for n, m, a in etapas]

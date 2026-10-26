@@ -67,16 +67,18 @@ O projeto tem **dois níveis**, cada um respondendo uma parte do enunciado:
 | IBGE SIDRA 5938 | PIB municipal (2021) | `data/raw/ibge/ibge_pib.csv` |
 | INEP · microdados da Avaliação da Alfabetização (2023 e 2024) | Um registro por aluno: escola, rede, presença, proficiência, peso | `data/raw/inep/alunos_por_escola.csv` (agregado por escola) |
 
-### 3.2 Gold: local ou S3
+### 3.2 Gold: reconstruída localmente, com contrato
 
-Na Fase 2 a Gold é um star schema no S3, consultado via Athena. Para o projeto rodar em qualquer máquina, [`src/preprocessing/gold.py`](src/preprocessing/gold.py) reconstrói o **mesmo modelo dimensional** a partir dos CSVs públicos do INEP e grava um snapshot em `data/gold/`:
+Na Fase 2 a Gold é um star schema no S3, consultado via Athena. Para o projeto rodar em qualquer máquina, [`src/preprocessing/gold.py`](src/preprocessing/gold.py) reconstrói a Gold a partir dos CSVs públicos do INEP e grava um snapshot em `data/gold/`:
 
 ```
 fato_alfabetizacao   id_municipio + ano   43.008 linhas (2023-2024 medidos, 2025-2030 só meta)
 dim_municipio        5.500   ·   dim_uf  25   ·   dim_tempo  8   ·   dim_nivel  6
 ```
 
-As 43.008 linhas batem com o documentado na Fase 2. Com credencial AWS, `GOLD_FONTE=s3` lê direto do data lake, e o resto do código não muda.
+As 43.008 linhas batem com o documentado na Fase 2. O esquema é o que **as views do Athena e o dashboard da Fase 2 leem** (`taxa_realizada`, `meta`, `gap_meta`, `meta_atingida`), e não os nomes que o `build_gold.py` da Fase 2 grava (`taxa_alfabetizacao`); essa diferença quebrava as views na Fase 2.
+
+Para não repetir: o esquema de cada tabela está escrito uma vez em [`contrato_gold.py`](src/preprocessing/contrato_gold.py) e é conferido **ao gravar, ao ler e contra a documentação técnica**. Coluna faltando, coluna a mais, tipo errado ou chave duplicada param o pipeline. A leitura direta do S3 foi retirada: sem acesso ao bucket não havia como testá-la.
 
 ### 3.3 Variáveis
 
@@ -567,7 +569,6 @@ pip install -r requirements.txt
 
 python -m src.run_pipeline             # tudo, ~3 min
 python -m src.run_pipeline --rapido    # sem busca de hiperparâmetros
-python -m src.run_pipeline --s3        # Gold direto do S3 da Fase 2 (exige credencial AWS)
 ```
 
 Rodar a partir da raiz do repositório. Cada etapa também roda sozinha (`python -m src.modeling.treinar`, por exemplo). Dados brutos e Gold estão versionados: não precisa de internet nem de AWS.
