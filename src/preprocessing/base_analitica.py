@@ -44,6 +44,7 @@ import pandas as pd
 from src.config import (ALVO, ANO_ALVO_PREVISAO, ANO_ALVO_TREINO,
                         ANO_ENTRADA_PREVISAO, ANO_ENTRADA_TREINO,
                         PROCESSED, RAW_IBGE)
+from src.preprocessing.funil import Funil, registrar
 from src.preprocessing.gold import carregar
 
 FAIXAS_PORTE = [
@@ -61,7 +62,13 @@ FEATURES = NUMERICAS + CATEGORICAS
 def _ibge(nome: str) -> pd.DataFrame:
     df = pd.read_csv(RAW_IBGE / f"ibge_{nome}.csv", dtype={"id_municipio": str})
     df["id_municipio"] = df["id_municipio"].str.zfill(7)
-    return df.drop_duplicates("id_municipio").set_index("id_municipio")
+    # Sem descarte silencioso: municipio repetido para o pipeline em vez de
+    # ficar com a primeira linha sem criterio
+    repetidos = df.loc[df["id_municipio"].duplicated(), "id_municipio"]
+    if len(repetidos):
+        raise SystemExit(f"ibge_{nome}.csv tem {len(repetidos)} municipios repetidos "
+                         f"(ex.: {', '.join(repetidos.head(3))}). Confira o download.")
+    return df.set_index("id_municipio")
 
 
 def contexto_ibge() -> pd.DataFrame:
@@ -83,7 +90,7 @@ def contexto_ibge() -> pd.DataFrame:
     return ctx.drop(columns=["pib"])
 
 
-def montar(ano_entrada: int, ano_alvo: int) -> pd.DataFrame:
+def montar(ano_entrada: int, ano_alvo: int, funil: Funil) -> pd.DataFrame:
     fato = carregar("fato_alfabetizacao").set_index("id_municipio")
     mun = carregar("dim_municipio").merge(carregar("dim_uf"), on="sigla_uf")
 
@@ -94,16 +101,27 @@ def montar(ano_entrada: int, ano_alvo: int) -> pd.DataFrame:
     alvo = fato[fato["ano"] == ano_alvo][["meta", "taxa_realizada"]]
     alvo.columns = ["meta_alvo", "_taxa_alvo"]
 
+    funil.passo(f"rede municipal com linha em {ano_entrada}", len(entrada))
+
     base = (entrada.join(alvo, how="inner")
             .join(mun.set_index("id_municipio"))
             .join(contexto_ibge()))
+    funil.passo(f"com linha tambem em {ano_alvo}", len(base),
+                f"sem resultado medido nem meta publicada para {ano_alvo}")
 
-    base = base[base["meta_alvo"].notna() & base["taxa_atual"].notna()].copy()
+    base = base[base["taxa_atual"].notna()].copy()
+    funil.passo(f"com taxa medida em {ano_entrada}", len(base),
+                f"sem resultado do INEP em {ano_entrada}")
+    base = base[base["meta_alvo"].notna()].copy()
+    funil.passo(f"com meta para {ano_alvo}", len(base),
+                f"INEP nao publicou meta de {ano_alvo} para o municipio")
     base["esforco_exigido"] = (base["meta_alvo"] - base["taxa_atual"]).round(2)
 
     if base["_taxa_alvo"].notna().any():
         base = base[base["_taxa_alvo"].notna()]
         base[ALVO] = (base["_taxa_alvo"] < base["meta_alvo"]).astype(int)
+        funil.passo(f"com resultado em {ano_alvo} (alvo conhecido)", len(base),
+                    f"sem resultado do INEP em {ano_alvo}: alvo desconhecido")
 
     # Conferencia cruzada: UF pelo codigo IBGE x UF informada pelo IBGE
     divergentes = (base["sigla_uf"] != base["sigla_uf_ibge"]).sum()
@@ -125,12 +143,16 @@ def resumo(base: pd.DataFrame, nome: str) -> None:
 
 def main() -> None:
     PROCESSED.mkdir(parents=True, exist_ok=True)
-    treino = montar(ANO_ENTRADA_TREINO, ANO_ALVO_TREINO)
-    previsao = montar(ANO_ENTRADA_PREVISAO, ANO_ALVO_PREVISAO)
+    funil_treino, funil_previsao = Funil("municipios"), Funil("municipios")
+    treino = montar(ANO_ENTRADA_TREINO, ANO_ALVO_TREINO, funil_treino)
+    previsao = montar(ANO_ENTRADA_PREVISAO, ANO_ALVO_PREVISAO, funil_previsao)
     treino.to_parquet(PROCESSED / "base_treino.parquet")
     previsao.to_parquet(PROCESSED / "base_previsao.parquet")
     resumo(treino, "treino")
     resumo(previsao, "previsao")
+    print("\n  funil (reports/funil.json):")
+    registrar("1_treino", funil_treino)
+    registrar("2_previsao", funil_previsao)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,95 @@
+{
+  "1_treino": {
+    "unidade": "municipios",
+    "passos": [
+      {
+        "etapa": "rede municipal com linha em 2023",
+        "restam": 5448,
+        "saem": null,
+        "motivo": ""
+      },
+      {
+        "etapa": "com linha tambem em 2024",
+        "restam": 5396,
+        "saem": 52,
+        "motivo": "sem resultado medido nem meta publicada para 2024"
+      },
+      {
+        "etapa": "com taxa medida em 2023",
+        "restam": 5396,
+        "saem": 0,
+        "motivo": "sem resultado do INEP em 2023"
+      },
+      {
+        "etapa": "com meta para 2024",
+        "restam": 5232,
+        "saem": 164,
+        "motivo": "INEP nao publicou meta de 2024 para o municipio"
+      },
+      {
+        "etapa": "com resultado em 2024 (alvo conhecido)",
+        "restam": 5232,
+        "saem": 0,
+        "motivo": "sem resultado do INEP em 2024: alvo desconhecido"
+      }
+    ]
+  },
+  "2_previsao": {
+    "unidade": "municipios",
+    "passos": [
+      {
+        "etapa": "rede municipal com linha em 2024",
+        "restam": 5448,
+        "saem": null,
+        "motivo": ""
+      },
+      {
+        "etapa": "com linha tambem em 2025",
+        "restam": 5352,
+        "saem": 96,
+        "motivo": "sem resultado medido nem meta publicada para 2025"
+      },
+      {
+        "etapa": "com taxa medida em 2024",
+        "restam": 5352,
+        "saem": 0,
+        "motivo": "sem resultado do INEP em 2024"
+      },
+      {
+        "etapa": "com meta para 2025",
+        "restam": 5352,
+        "saem": 0,
+        "motivo": "INEP nao publicou meta de 2025 para o municipio"
+      }
+    ]
+  },
+  "3_aluno": {
+    "unidade": "alunos com resultado",
+    "passos": [
+      {
+        "etapa": "avaliados em 2024, todas as redes",
+        "restam": 1851852,
+        "saem": null,
+        "motivo": ""
+      },
+      {
+        "etapa": "redes estadual e municipal",
+        "restam": 1851828,
+        "saem": 24,
+        "motivo": "rede federal: poucas escolas, fora da politica municipal"
+      },
+      {
+        "etapa": "escolas com peso amostral",
+        "restam": 1851828,
+        "saem": 0,
+        "motivo": "escola sem peso do INEP nao entra na taxa oficial"
+      },
+      {
+        "etapa": "municipio na base de treino",
+        "restam": 1765355,
+        "saem": 86473,
+        "motivo": "municipio fora da base municipal (ver secao 1_treino)"
+      }
+    ]
+  }
+}
