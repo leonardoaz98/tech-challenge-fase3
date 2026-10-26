@@ -1,0 +1,89 @@
+{
+  "referencia": "base de treino (2023 -> 2024)",
+  "comparada": "base de previsao (2024 -> 2025)",
+  "limites_psi": {
+    "atencao": 0.1,
+    "alerta": 0.25
+  },
+  "variaveis": {
+    "taxa_atual": {
+      "tipo": "numerica",
+      "psi": 0.0203,
+      "pct_fora_da_faixa_do_treino": 0.0,
+      "media_treino": 60.4836,
+      "media_previsao": 63.0417,
+      "nivel": "estavel"
+    },
+    "media_portugues": {
+      "tipo": "numerica",
+      "psi": 0.0328,
+      "pct_fora_da_faixa_do_treino": 0.0,
+      "media_treino": 750.7347,
+      "media_previsao": 753.1157,
+      "nivel": "estavel"
+    },
+    "participacao": {
+      "tipo": "numerica",
+      "psi": 0.056,
+      "pct_fora_da_faixa_do_treino": 0.0,
+      "media_treino": 89.8144,
+      "media_previsao": 91.0274,
+      "nivel": "estavel"
+    },
+    "esforco_exigido": {
+      "tipo": "numerica",
+      "psi": 1.2628,
+      "pct_fora_da_faixa_do_treino": 36.9208,
+      "media_treino": 1.6682,
+      "media_previsao": 2.2037,
+      "nivel": "alerta"
+    },
+    "log_populacao": {
+      "tipo": "numerica",
+      "psi": 0.0001,
+      "pct_fora_da_faixa_do_treino": 0.0374,
+      "media_treino": 9.5043,
+      "media_previsao": 9.4956,
+      "nivel": "estavel"
+    },
+    "log_pib_per_capita": {
+      "tipo": "numerica",
+      "psi": 0.0001,
+      "pct_fora_da_faixa_do_treino": 0.0,
+      "media_treino": 10.0921,
+      "media_previsao": 10.0929,
+      "nivel": "estavel"
+    },
+    "sigla_uf": {
+      "tipo": "categorica",
+      "psi": 0.0155,
+      "pct_fora_da_faixa_do_treino": 0.4111,
+      "categorias_novas": [
+        "AC"
+      ],
+      "nivel": "estavel"
+    },
+    "regiao": {
+      "tipo": "categorica",
+      "psi": 0.0005,
+      "pct_fora_da_faixa_do_treino": 0.0,
+      "categorias_novas": [],
+      "nivel": "estavel"
+    },
+    "porte_municipio": {
+      "tipo": "categorica",
+      "psi": 0.0,
+      "pct_fora_da_faixa_do_treino": 0.0,
+      "categorias_novas": [],
+      "nivel": "estavel"
+    }
+  },
+  "resumo": {
+    "qtd_alerta": 1,
+    "em_alerta": [
+      "esforco_exigido"
+    ],
+    "qtd_atencao": 0,
+    "em_atencao": []
+  }
+}
