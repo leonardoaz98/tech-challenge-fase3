@@ -1,0 +1,30 @@
+{
+  "auc_teste_municipal": {
+    "valor": 0.7986,
+    "tolerancia": 0.01
+  },
+  "recall_teste_municipal": {
+    "valor": 0.8101,
+    "tolerancia": 0.02
+  },
+  "municipios_criticos_2025": {
+    "valor": 617,
+    "tolerancia": 15
+  },
+  "pct_esforco_acima_do_treino": {
+    "valor": 0.3582,
+    "tolerancia": 0.01
+  },
+  "auc_teste_aluno": {
+    "valor": 0.6632,
+    "tolerancia": 0.01
+  },
+  "erro_medio_microdado_pp": {
+    "valor": 0.03,
+    "tolerancia": 0.01
+  },
+  "variaveis_em_alerta_de_deriva": {
+    "valor": 1,
+    "tolerancia": 0
+  }
+}
