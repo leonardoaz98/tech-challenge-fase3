@@ -19,3 +19,6 @@ models/
 # Editor
 .vscode/
 .idea/
+
+# Logs de execucao (o resumo de cada rodada fica em reports/execucoes.jsonl)
+logs/
