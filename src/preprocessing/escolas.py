@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 
 from src.config import GOLD, RAW_INEP, REDE_MUNICIPAL, REPORTS
+from src.preprocessing.contrato_gold import checar
 from src.preprocessing.gold import carregar
 
 TOLERANCIA_PP = 0.1          # diferenca aceitavel contra o indicador oficial
@@ -76,7 +77,7 @@ def main() -> None:
     v["escolas_mesmo_codigo_2023_2024_pct"] = perfil["pct_escolas_2024_que_existiam_em_2023"]
     (REPORTS / "validacao_microdados.json").write_text(json.dumps(v, indent=2))
 
-    escolas.to_parquet(GOLD / "fato_escola.parquet", index=False)
+    checar("fato_escola", escolas).to_parquet(GOLD / "fato_escola.parquet", index=False)
     print(f"\n  fato_escola: {len(escolas)} linhas")
     print(escolas.groupby(["ano", "rede"]).agg(
         escolas=("id_escola", "size"), alunos=("alunos_registrados", "sum")).to_string())

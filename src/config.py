@@ -4,7 +4,6 @@ Configuracao central do projeto.
 Caminhos, anos de referencia e parametros compartilhados por todas as
 etapas. Mudar um ano ou uma semente aqui muda o pipeline inteiro.
 """
-import os
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -17,12 +16,6 @@ PROCESSED = RAIZ / "data" / "processed"
 REPORTS = RAIZ / "reports"
 IMAGES = RAIZ / "images"
 MODELS = RAIZ / "models"
-
-# --- Origem da Gold ---
-# "local": snapshot versionado em data/gold (padrao, roda em qualquer maquina)
-# "s3":    le direto do data lake da Fase 2 (exige credencial AWS)
-GOLD_FONTE = os.getenv("GOLD_FONTE", "local")
-S3_GOLD = f"s3://{os.getenv('S3_BUCKET', 'tc2-fiap-datalake')}/gold"
 
 # --- Desenho temporal ---
 # Treino:    features de 2023 -> resultado de 2024 (alvo conhecido)

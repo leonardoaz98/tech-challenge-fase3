@@ -4,10 +4,17 @@ Camada Gold da Fase 2: reconstrucao local e leitura.
 ORIGEM
 ------
 Na Fase 2 (github.com/leonardoaz98/aws-tech-challenge2-fiap) a Gold e um
-star schema materializado no S3 e consultado via Athena. Este modulo
-reproduz o mesmo modelo dimensional a partir dos CSVs publicos do INEP
-(Base dos Dados), para que o projeto rode em qualquer maquina, sem
-credencial AWS.
+star schema no S3, consultado via Athena. Este modulo reconstroi a Gold a
+partir dos CSVs publicos do INEP (Base dos Dados), para que o projeto
+rode em qualquer maquina, sem credencial AWS.
+
+ESQUEMA
+-------
+Segue o esquema que as views do Athena e o dashboard da Fase 2 leem
+(taxa_realizada, meta, gap_meta, meta_atingida), e nao os nomes que o
+build_gold.py da Fase 2 grava (taxa_alfabetizacao). Na Fase 2 essa
+diferenca quebrava as views. Aqui o esquema esta escrito em
+contrato_gold.py e e conferido ao gravar e ao ler.
 
     fato_alfabetizacao  id_municipio + ano  (2023 e 2024 medidos; 2025-2030 so meta)
     dim_municipio       id_municipio
@@ -17,8 +24,10 @@ credencial AWS.
 
 LEITURA
 -------
-`carregar(tabela)` le do snapshot local (padrao) ou do S3 quando
-GOLD_FONTE=s3. O resto do projeto nao sabe de onde o dado veio.
+`carregar(tabela)` le o snapshot local e confere o contrato antes de
+entregar a tabela. A leitura direta do S3 foi retirada: sem acesso ao
+bucket nao havia como testa-la, e caminho documentado que ninguem rodou
+nao fica no projeto.
 
 Execucao (reconstroi o snapshot local):
     python -m src.preprocessing.gold
@@ -28,7 +37,8 @@ import sys
 import numpy as np
 import pandas as pd
 
-from src.config import GOLD, GOLD_FONTE, RAW_INEP, REDE_MUNICIPAL, S3_GOLD
+from src.config import GOLD, RAW_INEP, REDE_MUNICIPAL
+from src.preprocessing.contrato_gold import ContratoQuebrado, checar
 
 ANOS_META = range(2024, 2031)
 ANO_ULTIMO_RESULTADO = 2024
@@ -67,16 +77,15 @@ TABELAS = ["fato_alfabetizacao", "dim_municipio", "dim_uf", "dim_tempo", "dim_ni
 # Leitura
 # ---------------------------------------------------------------------
 def carregar(tabela: str) -> pd.DataFrame:
-    """Le uma tabela da Gold (snapshot local ou S3)."""
-    if GOLD_FONTE == "s3":
-        import awswrangler as wr  # dependencia opcional
-        return wr.s3.read_parquet(path=f"{S3_GOLD}/{tabela}/", dataset=True)
-
+    """Le uma tabela da Gold e confere o contrato antes de devolver."""
     caminho = GOLD / f"{tabela}.parquet"
     if not caminho.exists():
         sys.exit(f"Gold nao encontrada em {caminho}. "
                  "Rode: python -m src.preprocessing.gold")
-    return pd.read_parquet(caminho)
+    try:
+        return checar(tabela, pd.read_parquet(caminho))
+    except ContratoQuebrado as erro:
+        sys.exit(str(erro))
 
 
 # ---------------------------------------------------------------------
@@ -150,8 +159,9 @@ def construir() -> dict:
 
 
 def validar(gold: dict) -> None:
+    for nome, df in gold.items():
+        checar(nome, df)
     fato = gold["fato_alfabetizacao"]
-    assert not fato.duplicated(["id_municipio", "ano"]).any(), "fato com duplicata"
     assert fato["taxa_realizada"].dropna().between(0, 100).all(), "taxa fora de 0-100"
     assert fato["id_municipio"].isin(gold["dim_municipio"]["id_municipio"]).all()
     assert gold["dim_municipio"]["sigla_uf"].notna().all(), "municipio sem UF"

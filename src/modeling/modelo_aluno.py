@@ -63,9 +63,10 @@ from sklearn.model_selection import GroupKFold, GroupShuffleSplit
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from src.config import (GOLD, IMAGES, MODELS, PARTICOES_CV, PROCESSED,
+from src.config import (IMAGES, MODELS, PARTICOES_CV, PROCESSED,
                         PROPORCAO_TESTE, REPORTS, SEMENTE)
 from src.modeling.transformadores import LimitarFaixa
+from src.preprocessing.gold import carregar
 from src.visualization import estilo
 from src.visualization.estilo import plt
 
@@ -81,7 +82,7 @@ TOLERANCIA_INTERPRETAVEL = 0.005
 
 def montar_base() -> pd.DataFrame:
     """Duas linhas por escola (alfabetizados e nao), com o peso do grupo."""
-    e = pd.read_parquet(GOLD / "fato_escola.parquet")
+    e = carregar("fato_escola")
     e = e[(e.ano == ANO) & e.rede.isin(REDES) & (e.soma_peso > 0)].copy()
     # a participacao da escola so e conhecida no dia da prova: fica fora
     e = e.rename(columns={"participacao": "participacao_escola"})
