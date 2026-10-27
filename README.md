@@ -609,7 +609,7 @@ Rodar a partir da raiz do repositório. Cada etapa também roda sozinha (`python
 
 Cada execução grava o log completo em `logs/` e acrescenta uma linha em [`reports/execucoes.jsonl`](reports/execucoes.jsonl). Para conferir que os resultados batem com os publicados: `python -m src.checar_resultados`.
 
-Para refazer a extração dos microdados por aluno (opcional; o agregado já está no repositório): baixe os zips de [2023](https://download.inep.gov.br/dados_abertos/microdados_avaliacao_da_alfabetizacao_2023.zip) e [2024](https://download.inep.gov.br/dados_abertos/microdados_avaliacao_da_alfabetizacao_2024.zip) para `data/raw/inep/microdados/` e rode `python -m src.preprocessing.microdados_inep`. O site do INEP às vezes recusa download fora do navegador.
+Para refazer a extração dos microdados por aluno (opcional; o agregado já está no repositório): baixe os zips de [2023](https://download.inep.gov.br/dados_abertos/microdados_avaliacao_da_alfabetizacao_2023.zip) e [2024](https://download.inep.gov.br/dados_abertos/microdados_avaliacao_da_alfabetizacao_2024.zip) para `data/raw/inep/microdados/` e rode `python -m src.preprocessing.microdados_inep`. O site do INEP às vezes recusa download fora do navegador: se os zips estiverem na pasta de downloads, o script os encontra (`~/Downloads`, ou a pasta indicada em `PASTA_DOWNLOADS`).
 
 ## Qualidade, rastreabilidade e monitoramento
 
@@ -656,10 +656,11 @@ Segue a estrutura mínima do enunciado:
 ├── 📁 images                  gráficos usados no README e no vídeo
 ├── requirements.txt
 ├── README.md
+├── CONTRIBUTING.md           fluxo de trabalho do grupo
 └── .gitignore
 ```
 
-`models/` e `logs/` são criadas pelo pipeline e ficam fora do git. `.github/workflows/` guarda o teste automático. `LICENSE` (MIT) é um extra: o enunciado define a estrutura **mínima**.
+`models/` e `logs/` são criadas pelo pipeline e ficam fora do git. `.github/` guarda o teste automático e o modelo de pull request. `LICENSE` (MIT) é um extra: o enunciado define a estrutura **mínima**.
 
 ## Entregáveis
 
@@ -673,6 +674,16 @@ Segue a estrutura mínima do enunciado:
 | Vídeo executivo | _link após a gravação_ |
 | Pipeline reproduzível | `python -m src.run_pipeline`, conferido do zero pelo GitHub Actions a cada pull request |
 | Análises e visualizações | `images/` (20 gráficos) e `reports/` |
+
+## Organização do trabalho
+
+O fluxo está em [`CONTRIBUTING.md`](CONTRIBUTING.md) e vale para qualquer pessoa do grupo:
+
+1. **Uma branch por mudança**, com prefixo pelo tipo (`feat/`, `fix/`, `docs/`, `ci/`, `refactor/`).
+2. **Pull request com modelo** ([`.github/pull_request_template.md`](.github/pull_request_template.md)): o que muda, por quê, efeito nos números e conferências feitas.
+3. **Teste automático obrigatório:** o GitHub Actions roda o pipeline do zero; com o teste vermelho, o pull request não entra.
+4. **Revisão antes do merge**, e merge com `--merge` para o histórico mostrar a origem de cada mudança.
+5. **Decisão analítica nova vai para o registro** da documentação técnica, com motivo e evidência.
 
 ## Versionamento
 

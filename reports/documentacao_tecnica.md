@@ -222,6 +222,7 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `feat/metas-estaduais` | Metas e resultados do Brasil e das UFs na Gold (`fato_meta_uf`) |
 | `feat/resultado-2025` | Resultado de 2025 na Gold e validação real da previsão de 2025 |
 | `docs/validacao-2025` | README com a seção 6.6 e as limitações revistas pelo resultado de 2025 |
+| `fix/portabilidade-e-colaboracao` | Caminho de downloads configurável no extrator de microdados; `CONTRIBUTING.md` e modelo de pull request |
 
 Cada branch entrou na `main` por pull request.
 
