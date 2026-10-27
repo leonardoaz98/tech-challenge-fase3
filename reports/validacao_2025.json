@@ -1,0 +1,82 @@
+{
+  "municipios_previstos": 5352,
+  "com_resultado_2025": 5335,
+  "sem_resultado_2025": 17,
+  "taxa_falha_real": 0.278,
+  "taxa_falha_prevista_media": 0.4371,
+  "auc_modelo": 0.6825,
+  "auc_probabilidade_recomendada": 0.6015,
+  "auc_regra_simples_esforco": 0.745,
+  "alerta": {
+    "municipios_em_alerta": 2767,
+    "precisao": 0.3426,
+    "recall": 0.6392
+  },
+  "por_faixa": [
+    {
+      "faixa": "baixo",
+      "municipios": 1663,
+      "falha_prevista": 0.1729,
+      "falha_real": 0.1666
+    },
+    {
+      "faixa": "moderado",
+      "municipios": 905,
+      "falha_prevista": 0.3781,
+      "falha_real": 0.2851
+    },
+    {
+      "faixa": "alto",
+      "municipios": 2150,
+      "falha_prevista": 0.5649,
+      "falha_real": 0.354
+    },
+    {
+      "faixa": "critico",
+      "municipios": 617,
+      "falha_prevista": 0.7908,
+      "falha_real": 0.3031
+    }
+  ],
+  "rio_grande_do_sul": {
+    "municipios": 432,
+    "falha_real": 0.7361,
+    "prob_media_modelo_completo": 0.7733,
+    "prob_media_sem_choque": 0.3289
+  },
+  "esforco_acima_do_treino": {
+    "sim": {
+      "municipios": 1908,
+      "falha_real": 0.4796
+    },
+    "nao": {
+      "municipios": 3427,
+      "falha_real": 0.1657
+    }
+  },
+  "robustez_indicador_oficial": {
+    "municipios": 5320,
+    "taxa_falha_real": 0.2647,
+    "concordancia_com_microdado": 0.9867,
+    "auc_modelo": 0.6843,
+    "auc_regra_simples_esforco": 0.7486
+  },
+  "ufs": {
+    "brasil": {
+      "taxa": 66.0,
+      "meta": 63.77,
+      "atingiu": true
+    },
+    "ufs_com_meta": 26,
+    "ufs_que_atingiram": 19,
+    "ufs_abaixo_da_meta": [
+      "AM",
+      "PA",
+      "RJ",
+      "RN",
+      "RS",
+      "SC",
+      "SP"
+    ]
+  }
+}

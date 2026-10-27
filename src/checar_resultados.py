@@ -31,6 +31,9 @@ TOLERANCIAS = {
     "auc_teste_aluno": 0.01,
     "erro_medio_microdado_pp": 0.01,
     "variaveis_em_alerta_de_deriva": 0,
+    "taxa_falha_real_2025": 0.001,
+    "auc_real_2025_modelo": 0.01,
+    "auc_real_2025_regra_simples": 0.001,
 }
 
 
