@@ -40,6 +40,7 @@ ETAPAS = [
     ("Treino e validacao", "src.modeling.treinar", []),
     ("Interpretabilidade", "src.evaluation.interpretar", []),
     ("Aplicacao: ranking 2025 e perfis", "src.evaluation.aplicacao", []),
+    ("Validacao real: previsao 2025 x resultado 2025", "src.evaluation.validacao_2025", []),
     ("Monitoramento de deriva (treino x previsao)", "src.evaluation.drift", []),
     ("Escolas: microdado por aluno na Gold", "src.preprocessing.escolas", []),
     ("Desigualdade entre escolas", "src.visualization.desigualdade", []),
@@ -55,6 +56,9 @@ METRICAS = {
     "auc_teste_aluno": ("resultado_modelo_aluno.json", ["auc_teste"]),
     "erro_medio_microdado_pp": ("validacao_microdados.json", ["erro_medio_pp"]),
     "variaveis_em_alerta_de_deriva": ("drift.json", ["resumo", "qtd_alerta"]),
+    "taxa_falha_real_2025": ("validacao_2025.json", ["taxa_falha_real"]),
+    "auc_real_2025_modelo": ("validacao_2025.json", ["auc_modelo"]),
+    "auc_real_2025_regra_simples": ("validacao_2025.json", ["auc_regra_simples_esforco"]),
 }
 
 BIBLIOTECAS = ["pandas", "numpy", "pyarrow", "scikit-learn", "matplotlib", "shap"]

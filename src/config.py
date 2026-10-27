@@ -19,7 +19,8 @@ MODELS = RAIZ / "models"
 
 # --- Desenho temporal ---
 # Treino:    features de 2023 -> resultado de 2024 (alvo conhecido)
-# Previsao:  features de 2024 -> meta de 2025 (alvo desconhecido)
+# Previsao:  features de 2024 -> meta de 2025 (resultado de 2025 escondido;
+#            usado so na validacao real, src/evaluation/validacao_2025.py)
 ANO_ENTRADA_TREINO = 2023
 ANO_ALVO_TREINO = 2024
 ANO_ENTRADA_PREVISAO = 2024

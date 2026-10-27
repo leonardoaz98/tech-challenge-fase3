@@ -16,7 +16,7 @@ build_gold.py da Fase 2 grava (taxa_alfabetizacao). Na Fase 2 essa
 diferenca quebrava as views. Aqui o esquema esta escrito em
 contrato_gold.py e e conferido ao gravar e ao ler.
 
-    fato_alfabetizacao  id_municipio + ano  (2023 e 2024 medidos; 2025-2030 so meta)
+    fato_alfabetizacao  id_municipio + ano  (2023 a 2025 medidos; 2026-2030 so meta)
     dim_municipio       id_municipio
     dim_uf              sigla_uf
     dim_tempo           ano
@@ -43,7 +43,19 @@ from src.config import GOLD, RAW_INEP, REDE_MUNICIPAL
 from src.preprocessing.contrato_gold import ContratoQuebrado, checar
 
 ANOS_META = range(2024, 2031)
-ANO_ULTIMO_RESULTADO = 2024
+ANO_ULTIMO_RESULTADO = 2025
+
+# 2023 e 2024 vem da Base dos Dados (mesma fonte da Fase 2). 2025 ainda nao
+# esta la: vem direto do INEP, nos mesmos formatos publicados.
+ANO_ULTIMO_BASE_DOS_DADOS = 2024
+# TS_MUNICIPIO.csv, de dentro do zip dos microdados de 2025: e o mesmo arquivo
+# que a Base dos Dados publica como tabela `municipio`, com casas decimais.
+# https://download.inep.gov.br/dados_abertos/microdados_AEEB_2025.zip
+ARQUIVO_MUNICIPIOS_2025 = RAW_INEP / "TS_MUNICIPIO_2025.csv"
+# Planilha de divulgacao dos municipios (participacao de 2025 e indicador
+# oficial arredondado, usado na conferencia de robustez da validacao):
+# https://download.inep.gov.br/avaliacao_da_alfabetizacao/resultados/resultados_e_metas_municipios_2025_3.xlsx
+PLANILHA_MUNICIPIOS_2025 = RAW_INEP / "resultados_e_metas_municipios_2025.xlsx"
 
 REGIOES = {
     "AC": "Norte", "AP": "Norte", "AM": "Norte", "PA": "Norte",
@@ -117,6 +129,25 @@ def ler_planilha_inep(caminho: Path) -> pd.DataFrame:
     return df[pd.to_numeric(df["ANO"], errors="coerce").notna()].reset_index(drop=True)
 
 
+def resultado_2025() -> pd.DataFrame:
+    """Resultado de 2025 da rede municipal, no formato da Base dos Dados."""
+    ts = pd.read_csv(ARQUIVO_MUNICIPIOS_2025, sep=";", encoding="latin1",
+                     dtype={"CO_MUNICIPIO": str})
+    ts = ts[ts["ID_TIPO_REDE"] == REDE_MUNICIPAL]
+    res = pd.DataFrame({
+        "id_municipio": ts["CO_MUNICIPIO"].str.strip().str.zfill(7),
+        "ano": 2025,
+        "taxa_alfabetizacao": ts["PC_ALUNO_ALFABETIZADO"].astype(float),
+        "media_portugues": ts["VL_MEDIA_LP"].astype(float),
+    })
+    p = ler_planilha_inep(PLANILHA_MUNICIPIOS_2025)
+    part = pd.DataFrame({
+        "id_municipio": p["CO_MUNICIPIO"].astype("Int64").astype(str).str.zfill(7),
+        "percentual_participacao": pd.to_numeric(p["PC_AVALIADOS_LP"], errors="coerce").astype(float),
+    })
+    return res.merge(part, on="id_municipio", how="left")
+
+
 def construir_meta_uf() -> pd.DataFrame:
     """Resultado e meta do Brasil e de cada UF (rede publica), 2023 a 2030."""
     uf = _ler_inep("meta_alfabetizacao_uf")
@@ -188,7 +219,11 @@ def construir() -> dict:
     medidos = (resultado
                .merge(participacao, on=["id_municipio", "ano"], how="left")
                .merge(metas_longo, on=["id_municipio", "ano"], how="left"))
-    futuros = metas_longo[metas_longo["ano"] > ANO_ULTIMO_RESULTADO]
+    # Anos a partir de 2025: a linha existe para todo municipio com meta; o
+    # resultado de 2025 entra onde houver. Municipio com resultado e sem meta
+    # fica de fora, como em 2023 e 2024 ficam os sem resultado.
+    futuros = (metas_longo[metas_longo["ano"] > ANO_ULTIMO_BASE_DOS_DADOS]
+               .merge(resultado_2025(), on=["id_municipio", "ano"], how="left"))
     fato = pd.concat([medidos, futuros], ignore_index=True)
     fato = fato.rename(columns={"taxa_alfabetizacao": "taxa_realizada"})
     fato["rede"] = REDE_MUNICIPAL

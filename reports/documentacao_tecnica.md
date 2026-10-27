@@ -13,10 +13,10 @@ Complementa o README com o que um revisor técnico precisa para auditar o projet
 | Coluna | Tipo | Descrição |
 |---|---|---|
 | `id_municipio` | texto (7) | Código IBGE do município |
-| `ano` | inteiro | 2023 e 2024 medidos; 2025 a 2030 só meta |
-| `taxa_realizada` | float | % de alunos alfabetizados (≥ 743 pontos). Nulo em 2025+ |
-| `media_portugues` | float | Média de proficiência em português. Nulo em 2025+ |
-| `percentual_participacao` | float | % de alunos que fizeram a avaliação. Nulo em 2025+ |
+| `ano` | inteiro | 2023 a 2025 medidos; 2026 a 2030 só meta |
+| `taxa_realizada` | float | % de alunos alfabetizados (≥ 743 pontos). 2023 e 2024 da Base dos Dados; 2025 do `TS_MUNICIPIO` do INEP (mesmo arquivo, com casas decimais). Nulo em 2026+ |
+| `media_portugues` | float | Média de proficiência em português. Nulo em 2026+ |
+| `percentual_participacao` | float | % de alunos que fizeram a avaliação. 2025 da planilha do INEP (inteiro). Nulo em 2026+ |
 | `meta` | float | Meta pactuada para o ano |
 | `rede` | inteiro | 3 = municipal |
 | `gap_meta` | float | `taxa_realizada − meta` |
@@ -123,6 +123,10 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | 34 | Deriva avisa, não para | Mudança de distribuição é informação para o gestor, não erro de dado | `esforco_exigido` em alerta (PSI 1,26), demais estáveis |
 | 35 | Teste automático compara métricas com tolerância | Máquinas diferentes mudam pixels e última casa decimal, não a conclusão | `referencia_metricas.json` |
 | 36 | Metas do Brasil e das UFs na Gold | O enunciado lista metas nacionais e estaduais; os CSVs estavam no repositório sem uso | `fato_meta_uf`, 28 linhas por ano (2025 das UFs em inteiros, como o INEP divulga) |
+| 37 | Resultado de 2025 do `TS_MUNICIPIO` dos microdados | É o mesmo arquivo que a Base dos Dados publica como `municipio`, com casas decimais; a planilha de divulgação arredonda | 2025 entra com o mesmo formato de 2023 e 2024 |
+| 38 | Resultado de 2025 escondido da base de previsão | O ranking tem de ser o que se saberia no início de 2025 | `base_previsao` idêntica à anterior; ranking idêntico |
+| 39 | Validar contra uma regra simples | Saber se o modelo ganha de ordenar só pelo esforço exigido | `auc_regra_simples_esforco` em `validacao_2025.json` |
+| 40 | Conferir com o indicador oficial arredondado | A planilha oficial difere do microdado em alguns municípios | `robustez_indicador_oficial` em `validacao_2025.json` |
 
 ---
 
@@ -144,6 +148,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | `src/modeling/modelo_aluno.py` | `fato_escola` + `base_treino` | `models/modelo_aluno.joblib`, `reports/resultado_modelo_aluno.json`, `images/aluno_*.png` (comparação, permutação e SHAP) |
 | `src/preprocessing/funil.py` | chamado por `base_analitica.py` e `modelo_aluno.py` | `reports/funil.json` (linhas que entram e saem de cada filtro, com motivo) |
 | `src/evaluation/drift.py` | as duas bases | `reports/drift.json` (PSI e % fora da faixa do treino por variável) |
+| `src/evaluation/validacao_2025.py` | `ranking_2025.csv` + resultado de 2025 na Gold + planilha oficial | `reports/validacao_2025.json`, `images/validacao_2025.png` |
 | `src/run_pipeline.py` | — | roda tudo na ordem (a extração dos microdados é à parte); grava `logs/pipeline_<data>.log` e acrescenta uma linha em `reports/execucoes.jsonl` |
 | `src/checar_resultados.py` | `reports/*.json` + `reports/referencia_metricas.json` | sai com erro se alguma métrica sair da tolerância |
 
@@ -214,6 +219,7 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `ci/pipeline-github-actions` | Pipeline do zero a cada pull request, com comparação das métricas |
 | `docs/qualidade-e-monitoramento` | README e documentação técnica com qualidade, rastreabilidade e custo |
 | `feat/metas-estaduais` | Metas e resultados do Brasil e das UFs na Gold (`fato_meta_uf`) |
+| `feat/resultado-2025` | Resultado de 2025 na Gold e validação real da previsão de 2025 |
 
 Cada branch entrou na `main` por pull request.
 

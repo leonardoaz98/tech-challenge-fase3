@@ -6,7 +6,11 @@ DESENHO TEMPORAL
 A mesma funcao monta duas bases com as MESMAS colunas:
 
     treino     features de 2023  ->  atingiu a meta de 2024?   (alvo conhecido)
-    previsao   features de 2024  ->  vai atingir a meta de 2025? (alvo desconhecido)
+    previsao   features de 2024  ->  vai atingir a meta de 2025? (alvo escondido)
+
+O resultado de 2025 ja saiu e esta na Gold, mas a base de previsao o
+descarta: o ranking de 2025 continua sendo o que se saberia no inicio de
+2025. A conferencia com o resultado real fica em validacao_2025.py.
 
 Os nomes das colunas nao carregam o ano (taxa_atual, e nao taxa_2023).
 Assim o modelo treinado no primeiro par e aplicado no segundo sem
@@ -90,7 +94,7 @@ def contexto_ibge() -> pd.DataFrame:
     return ctx.drop(columns=["pib"])
 
 
-def montar(ano_entrada: int, ano_alvo: int, funil: Funil) -> pd.DataFrame:
+def montar(ano_entrada: int, ano_alvo: int, funil: Funil, alvo_conhecido: bool) -> pd.DataFrame:
     fato = carregar("fato_alfabetizacao").set_index("id_municipio")
     mun = carregar("dim_municipio").merge(carregar("dim_uf"), on="sigla_uf")
 
@@ -100,6 +104,11 @@ def montar(ano_entrada: int, ano_alvo: int, funil: Funil) -> pd.DataFrame:
 
     alvo = fato[fato["ano"] == ano_alvo][["meta", "taxa_realizada"]]
     alvo.columns = ["meta_alvo", "_taxa_alvo"]
+    if not alvo_conhecido:
+        # Previsao: simula o gestor no inicio do ano-alvo. O resultado desse
+        # ano pode ja estar na Gold (2025 esta), mas nao pode entrar aqui;
+        # ele so e usado depois, em validacao_2025.py, para conferir.
+        alvo["_taxa_alvo"] = np.nan
 
     funil.passo(f"rede municipal com linha em {ano_entrada}", len(entrada))
 
@@ -117,7 +126,7 @@ def montar(ano_entrada: int, ano_alvo: int, funil: Funil) -> pd.DataFrame:
                 f"INEP nao publicou meta de {ano_alvo} para o municipio")
     base["esforco_exigido"] = (base["meta_alvo"] - base["taxa_atual"]).round(2)
 
-    if base["_taxa_alvo"].notna().any():
+    if alvo_conhecido:
         base = base[base["_taxa_alvo"].notna()]
         base[ALVO] = (base["_taxa_alvo"] < base["meta_alvo"]).astype(int)
         funil.passo(f"com resultado em {ano_alvo} (alvo conhecido)", len(base),
@@ -144,8 +153,8 @@ def resumo(base: pd.DataFrame, nome: str) -> None:
 def main() -> None:
     PROCESSED.mkdir(parents=True, exist_ok=True)
     funil_treino, funil_previsao = Funil("municipios"), Funil("municipios")
-    treino = montar(ANO_ENTRADA_TREINO, ANO_ALVO_TREINO, funil_treino)
-    previsao = montar(ANO_ENTRADA_PREVISAO, ANO_ALVO_PREVISAO, funil_previsao)
+    treino = montar(ANO_ENTRADA_TREINO, ANO_ALVO_TREINO, funil_treino, alvo_conhecido=True)
+    previsao = montar(ANO_ENTRADA_PREVISAO, ANO_ALVO_PREVISAO, funil_previsao, alvo_conhecido=False)
     treino.to_parquet(PROCESSED / "base_treino.parquet")
     previsao.to_parquet(PROCESSED / "base_previsao.parquet")
     resumo(treino, "treino")
