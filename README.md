@@ -8,7 +8,7 @@ Projeto de portfólio construído a partir do Tech Challenge da Fase 3 da pós e
 - **Município:** regressão logística com AUC de 0,80 no teste, calibrada para detectar 81% dos municípios que falham. Ranking de 2025 com 5.352 municípios, 617 em risco crítico.
 - **Aluno:** AUC de 0,663 por criança, em municípios nunca vistos no treino: ~68% do caminho até o máximo possível com dados de escola. 77% da diferença entre as crianças está dentro da mesma escola.
 - **Escolas:** ~770 escolas críticas reais (abaixo de 40%) escondidas em municípios que bateram a meta de 2024.
-- **Validação real:** o resultado de 2025 saiu e a previsão foi conferida. AUC de 0,68 num ano que o modelo nunca viu, abaixo dos 0,80 do teste e abaixo de uma regra simples (0,745). O país melhorou 9,5 p.p. em um ano e o modelo, treinado num ano ruim, superestimou o risco. Detalhes na seção 6.6.
+- **Validação real:** o resultado de 2025 saiu e a previsão foi conferida. AUC de 0,68 num ano que o modelo nunca viu, abaixo dos 0,80 do teste e abaixo de uma regra simples (0,745). O país melhorou 9,5 p.p. em um ano e o modelo, treinado num ano ruim, superestimou o risco. O maior erro foi a Bahia: 99% dos municípios em alerta, só 14% falharam. Detalhes na seção 6.6.
 
 | | |
 |---|---|
@@ -114,7 +114,7 @@ Fora do modelo, com motivo:
 | Nulos nas features | 0 | 0 |
 | Não atingiram | 46,7% | 27,8% (resultado real de 2025, seção 6.6) |
 
-Fora: **DF** (não tem rede municipal) e **RR** (sem rede municipal na avaliação). O **AC** não tem dado de 2024 no treino, mas aparece em 2025; seus 22 municípios são avaliados sem o efeito de UF. 216 municípios de 2023 ficaram fora do treino: 52 sem resultado em 2024 e 164 sem meta de 2024. Cada descarte do projeto, com contagem e motivo, está em [`reports/funil.json`](reports/funil.json).
+Fora: **DF** (não tem rede municipal) e **RR** (sem rede municipal na avaliação). O **AC** não tem resultado de 2023 nem meta de 2024, então fica fora do treino, mas aparece em 2025; seus 22 municípios são avaliados sem o efeito de UF (em 2025, 86% ficaram em alerta e nenhum falhou). 216 municípios de 2023 ficaram fora do treino: 52 sem resultado em 2024 e 164 sem meta de 2024. Cada descarte do projeto, com contagem e motivo, está em [`reports/funil.json`](reports/funil.json).
 
 ### 3.5 Microdados por aluno
 
@@ -522,7 +522,7 @@ Como o código da escola é mascarado, o produto é a lista de municípios ([`mu
 
 A UF é uma das duas variáveis mais importantes. O ranking concentra Bahia, Pará e Rio de Janeiro no topo, e um município bem gerido nesses estados herda risco por estar lá. **O score indica onde investigar, não onde punir.** Não deve condicionar repasse de recurso nem avaliar gestor, porque um município não escolhe em que estado está.
 
-O resultado de 2025 mostrou o outro lado do problema: o efeito do estado muda. A Bahia tinha 99% dos municípios em alerta e só 14% falharam, porque a rede estadual melhorou de um ano para o outro. Uma variável de política estadual (seção 11) é o que permitiria ao modelo enxergar essa mudança antes.
+O resultado de 2025 mostrou o outro lado do problema: o efeito do estado muda. A Bahia tinha 99% dos municípios em alerta e só 14% falharam: as redes municipais baianas deram o maior salto do país, de 37% para 60% em média, de um ano para o outro. Uma variável de política estadual (seção 11) é o que permitiria ao modelo enxergar essa mudança antes.
 
 ### 9.2 Teto de previsibilidade
 
@@ -586,7 +586,7 @@ UFs com mais municípios em alerta: Bahia (99%), Pará (97%), Rio de Janeiro (96
    - Baixa participação → **apoio à gestão primeiro**: cadastro, frequência, comunicação com famílias. Mandar só material pedagógico tende a não surtir efeito.
    - Baixo desempenho com alta participação → **apoio pedagógico**: formação de professores, material estruturado. A gestão já funciona.
    - Alto desempenho → **documentar e espalhar** o que funciona.
-3. **Agir no estado onde o alerta é quase total, mas conferir antes o que o estado está fazendo.** Onde quase todos os municípios estão em alerta, negociar um a um é ineficiente: o caminho é a secretaria estadual. Em 2025, a Bahia (99% em alerta) teve só 14% de falha, porque o programa estadual avançou; o Rio de Janeiro (96%) teve 51%. O modelo não enxerga política estadual, e o gestor enxerga.
+3. **Agir no estado onde o alerta é quase total, mas conferir antes o que o estado está fazendo.** Onde quase todos os municípios estão em alerta, negociar um a um é ineficiente: o caminho é a secretaria estadual. Em 2025, a Bahia (99% em alerta) teve só 14% de falha, com as redes municipais subindo 23 p.p. em média; o Rio de Janeiro (96%) teve 51%. O modelo não enxerga política estadual, e o gestor enxerga.
 4. **Acompanhar a participação durante o ano.** É conhecida antes do resultado. Rede abaixo de 85% pode ser sinalizada no mesmo ano letivo.
 5. **Olhar dentro dos municípios que bateram a meta.** 542 deles têm escolas abaixo de 40% de alfabetizados. A média do município esconde essas escolas, e só a secretaria consegue localizá-las.
 6. **Levar o acompanhamento para dentro da escola.** Três quartos da diferença entre as crianças estão entre colegas da mesma escola: avaliação diagnóstica e acompanhamento individual são onde a política tem mais espaço.
@@ -715,7 +715,7 @@ O fluxo está em [`CONTRIBUTING.md`](CONTRIBUTING.md) e vale para qualquer pesso
 
 ## Versionamento
 
-Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`, `fix/contrato-gold`, `fix/descartes-com-regra`, `feat/registro-execucao`, `feat/monitoramento-deriva`, `ci/pipeline-github-actions`, `docs/qualidade-e-monitoramento`, `feat/metas-estaduais`, `feat/resultado-2025`, `docs/validacao-2025`, `fix/portabilidade-e-colaboracao`, `docs/revisao-enunciado`, `fix/validacao-por-uf`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
+Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`, `fix/contrato-gold`, `fix/descartes-com-regra`, `feat/registro-execucao`, `feat/monitoramento-deriva`, `ci/pipeline-github-actions`, `docs/qualidade-e-monitoramento`, `feat/metas-estaduais`, `feat/resultado-2025`, `docs/validacao-2025`, `fix/portabilidade-e-colaboracao`, `docs/revisao-enunciado`, `fix/validacao-por-uf`, `fix/registro-atualizado`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
 
 ## Autor
 

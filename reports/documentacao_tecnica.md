@@ -101,7 +101,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | 12 | Limiar pelo recall ≥ 80% | Perder um município custa mais que um alarme falso | Escolhido fora da amostra do treino; 81% no teste |
 | 13 | `LimitarFaixa` no pipeline | 36% dos municípios de 2025 fora da faixa de esforço do treino | Esforço máximo no treino: 7,2 p.p. |
 | 14 | RS em 2025 por modelo sem RS | Queda de 2024 causada pelas enchentes | RS −20 p.p. vs +4,8 no resto; MEC confirma |
-| 15 | AC avaliado sem efeito de UF | Sem dado de 2024 no treino | `handle_unknown="ignore"` |
+| 15 | AC avaliado sem efeito de UF | Sem resultado de 2023 nem meta de 2024: fora do treino | `handle_unknown="ignore"`; em 2025, nenhum dos 22 municípios falhou |
 | 16 | KMeans em taxa, participação, esforço | Perfis acionáveis de gestão | k = 4 pela silhueta (0,361) |
 | 17 | Faixas ancoradas no limiar | Coerência entre alerta e modelo | Validadas fora da amostra: 16% a 84% de falha |
 | 18 | Microdados direto do INEP, não do BigQuery | Dado aberto, sem credencial; quem clona consegue refazer | Mesma fonte da tabela `alunos` da Base dos Dados |
@@ -136,7 +136,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 
 | Script | Entrada | Saída |
 |---|---|---|
-| `src/preprocessing/gold.py` | `data/raw/inep/*.csv` e `*.xlsx` | `data/gold/*.parquet` (para se fugir do contrato) |
+| `src/preprocessing/gold.py` | `data/raw/inep/*.csv` e `*.xlsx` | `data/gold/*.parquet` (o pipeline para se a tabela fugir do contrato) |
 | `src/preprocessing/contrato_gold.py` | `data/gold/*.parquet` + esta documentação | confere esquema, tipos, chave e dicionário de dados |
 | `src/preprocessing/baixar_dados_ibge.py` | APIs do IBGE | `data/raw/ibge/*.csv` (já versionados) |
 | `src/preprocessing/base_analitica.py` | Gold + IBGE | `data/processed/base_treino.parquet`, `base_previsao.parquet` |
@@ -145,7 +145,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | `src/evaluation/interpretar.py` | modelo + `base_treino` | `images/interp_*.png`, `reports/interpretabilidade.json` |
 | `src/evaluation/aplicacao.py` | modelo + as duas bases | `reports/ranking_2025.csv`, `ranking_2024_oof.csv`, `perfis.csv`, `risco_uf_2025.csv`, `aplicacao.json`, `images/aplicacao_*.png` |
 | `src/preprocessing/microdados_inep.py` | zips do INEP em `data/raw/inep/microdados/` (fora do git) | `data/raw/inep/alunos_por_escola.csv`, `reports/perfil_microdados.json` |
-| `src/preprocessing/escolas.py` | `alunos_por_escola.csv` + Gold | `data/gold/fato_escola.parquet`, `reports/validacao_microdados.json` (para se não reproduzir o indicador oficial) |
+| `src/preprocessing/escolas.py` | `alunos_por_escola.csv` + Gold | `data/gold/fato_escola.parquet`, `reports/validacao_microdados.json` (o pipeline para se o microdado não reproduzir o indicador oficial) |
 | `src/visualization/desigualdade.py` | `fato_escola` | `images/escolas_*.png`, `reports/escolas_resumo.json`, `reports/municipios_com_escolas_criticas.csv` |
 | `src/modeling/modelo_aluno.py` | `fato_escola` + `base_treino` | `models/modelo_aluno.joblib`, `reports/resultado_modelo_aluno.json`, `images/aluno_*.png` (comparação, permutação e SHAP) |
 | `src/preprocessing/funil.py` | chamado por `base_analitica.py` e `modelo_aluno.py` | `reports/funil.json` (linhas que entram e saem de cada filtro, com motivo) |
@@ -199,7 +199,7 @@ python -m src.run_pipeline
 
 ## 6. Versionamento
 
-Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar a origem de cada mudança:
+Uma branch por etapa, mergeada na `main` por pull request com commit de merge (`gh pr merge --merge`) para o histórico mostrar a origem de cada mudança:
 
 | Branch | Conteúdo |
 |---|---|
@@ -228,7 +228,8 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `fix/portabilidade-e-colaboracao` | Caminho de downloads configurável no extrator de microdados; `CONTRIBUTING.md` e modelo de pull request |
 | `docs/revisao-enunciado` | Revisão contra o enunciado: hipóteses explícitas, diagrama completo, gráficos que faltavam, validação de 2025 no notebook 02 |
 | `fix/validacao-por-uf` | Validação de 2025 por UF; o erro da Bahia documentado no README e no notebook 01 |
+| `fix/registro-atualizado` | Registro de execução com os dados de 2025 e ajustes de texto (AC, Bahia, versionamento) |
 
 Cada branch entrou na `main` por pull request.
 
-Padrão de mensagem: `tipo: descrição` (`feat`, `fix`, `docs`, `chore`), corpo explicando o porquê.
+Padrão de mensagem: `tipo: descrição` (`feat`, `fix`, `docs`, `ci`, `refactor`, `chore`), corpo explicando o porquê.
