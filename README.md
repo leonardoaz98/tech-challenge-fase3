@@ -112,7 +112,7 @@ Fora do modelo, com motivo:
 | Municípios | 5.232 | 5.352 |
 | UFs | 24 | 25 |
 | Nulos nas features | 0 | 0 |
-| Não atingiram | 46,7% | — |
+| Não atingiram | 46,7% | 27,8% (resultado real de 2025, seção 6.6) |
 
 Fora: **DF** (não tem rede municipal) e **RR** (sem rede municipal na avaliação). O **AC** não tem dado de 2024 no treino, mas aparece em 2025; seus 22 municípios são avaliados sem o efeito de UF. 216 municípios de 2023 ficaram fora do treino: 52 sem resultado em 2024 e 164 sem meta de 2024. Cada descarte do projeto, com contagem e motivo, está em [`reports/funil.json`](reports/funil.json).
 
@@ -173,7 +173,7 @@ run_pipeline.py roda tudo na ordem e registra a execução (logs/, reports/execu
 | H1 | Município mais rico ou maior alfabetiza mais | **Refutada** | Correlação PIB × risco: −0,02 entre UFs, 0,01 dentro delas (7.6) |
 | H2 | Participação baixa só deixa o indicador mais ruidoso | **Refutada** | Volatilidade igual em todas as faixas; o que muda é a direção: +0,3 p.p. com participação baixa, +4,2 com alta (8.2) |
 | H3 | Quem teve um ano muito bom tende a cair | **Confirmada** | Correlação de −0,45 entre a taxa e a variação seguinte (7.4) |
-| H4 | O estado pesa mais que as características do município | **Confirmada** | UF sozinha tem AUC 0,73; o modelo inteiro, 0,79 (8.1) |
+| H4 | O estado pesa mais que as características do município | **Confirmada, mas instável** | UF sozinha tem AUC 0,73; o modelo inteiro, 0,79 (8.1). Em 2025 o efeito de uma UF mudou muito: a Bahia, pior estado em 2024, teve só 14% de falha (6.6) |
 | H5 | A queda do RS em 2024 foi passageira | **Refutada em 2025** | 73,6% dos municípios do RS não bateram a meta de 2025 (6.6) |
 | H6 | A escola explica a maior parte da diferença entre as crianças | **Refutada** | 77% da variação está entre alunos da mesma escola (8.5) |
 | H7 | Metas não recalculadas depois de 2024 viram alvos difíceis | **Confirmada em 2025** | Com esforço acima do visto no treino, 48% falharam; nos demais, 17% (6.6) |
@@ -200,7 +200,7 @@ Quatro barreiras contra vazamento:
 3. **Transformações dentro do Pipeline.** Mediana, média, desvio e categorias são aprendidas em cada fold, só com o treino daquele fold.
 4. **Teste intocado.** Busca de hiperparâmetros e escolha do limiar acontecem só no treino. O teste é usado uma vez.
 
-`LimitarFaixa` corta cada variável no mínimo e máximo do treino. No treino não muda nada; em 2025 impede que a regressão logística extrapole em linha reta (ver 9.3).
+`LimitarFaixa` corta cada variável no mínimo e máximo do treino. No treino não muda nada; em 2025 impede que a regressão logística extrapole em linha reta (ver 9.3). O custo dessa escolha apareceu no resultado real de 2025 (6.6).
 
 **Checklist do enunciado:**
 
@@ -353,7 +353,8 @@ O ranking de 2025 foi feito só com o que se sabia no início de 2025. O INEP pu
 **O que aconteceu.** A taxa média dos municípios subiu de 62,8% para 72,3% em um ano, e só 27,8% não bateram a meta, contra 46,7% no ano do treino. O modelo aprendeu num ano ruim e superestimou o risco em todas as faixas, menos na mais baixa.
 
 **Onde o modelo errou, e por quê:**
-- **A faixa crítica não separou.** Só 30% dos críticos falharam, menos que na faixa alta (35%). Os críticos eram os de taxa mais baixa (54% em 2024), e foram os que mais subiram (+13,9 p.p.). A regressão à média que o modelo aprendeu (seção 7.4) veio mais forte do que em 2024.
+- **O maior erro foi a Bahia.** O estado concentrava 269 dos 617 municípios críticos e 99% dos seus municípios estavam em alerta. Só 14% falharam: a rede pública baiana deu o maior salto do país (de 36% para 55% de alfabetizados). O modelo aprendeu "Bahia = risco" com 2024 (coeficiente +1,96) e não tinha como saber que o estado mudaria. É a ancoragem estadual da seção 9.1 cobrando o preço. No outro extremo, Rio de Janeiro (96% em alerta, 51% de falha) e Amazonas (84% e 55%) confirmaram o alerta.
+- **A faixa crítica não separou.** Só 30% dos críticos falharam, menos que na faixa alta (35%). Boa parte é a Bahia (acima). Além disso, os críticos eram os de taxa mais baixa (54% em 2024), e foram os que mais subiram (+13,9 p.p.). A regressão à média que o modelo aprendeu (seção 7.4) veio mais forte do que em 2024.
 - **O corte do esforço exigido custou caro.** Dentro da faixa vista no treino, modelo e regra simples empatam (AUC 0,666). Fora dela, nos 1.908 municípios com esforço acima de 7,2 p.p., o modelo cai para 0,569 e a regra fica em 0,615. O `LimitarFaixa` evitou extrapolar, mas tratou como iguais municípios que precisavam subir 8 e 20 p.p. Entre eles, 48% falharam; entre os demais, 17%.
 - **A hipótese do RS estava errada.** O ranking avaliou o RS sem o choque das enchentes, apostando na recuperação. O RS não se recuperou: 73,6% dos municípios falharam. O modelo completo previa 77% em média, e o ajuste baixou para 33%. Por isso a probabilidade recomendada saiu pior que o modelo completo.
 
@@ -447,7 +448,7 @@ Cada ponto é uma escola do teste; à direita do zero, a variável aumenta a cha
 | Pergunta | Resposta | Onde |
 |---|---|---|
 | Quais fatores mais impactam a alfabetização? | UF (efeito institucional, não econômico), regressão à média da taxa, esforço exigido e participação. Riqueza e porte quase não pesam. No nível da criança, 77% da diferença está dentro da mesma escola | 7.1, 7.3, 7.6, 8.5 |
-| Quais municípios apresentam maior risco educacional? | 617 em risco crítico para 2025, concentrados na Bahia, Pará e Rio de Janeiro. Além deles, 542 municípios que bateram a meta têm escolas críticas escondidas pela média | 10.2, 8.6 |
+| Quais municípios apresentam maior risco educacional? | 617 em risco crítico para 2025, concentrados na Bahia, Pará e Rio de Janeiro. Em 2025, a Bahia surpreendeu (14% de falha); Pará (40%) e Rio de Janeiro (51%) confirmaram o risco. Além deles, 542 municípios que bateram a meta têm escolas críticas escondidas pela média | 10.2, 8.6 |
 | Quais regiões possuem padrões semelhantes? | 4 perfis (KMeans); o que mais separa é a participação: 59% de falha com participação baixa x 38% com alta | 8.3, `perfis.csv` |
 | Como prever municípios que podem não atingir metas futuras? | Modelo treinado em 2023→2024 aplicado a 2024→2025, com limiar que detecta 81% das falhas no teste. Conferido com o resultado real de 2025: AUC 0,68, abaixo de uma regra simples (0,745), porque 2025 foi um ano de melhora geral | 6, 6.6, 10.2 |
 | Quais variáveis possuem maior influência nos modelos? | Taxa atual e UF se revezam no 1º lugar nas 8 sementes; depois média de português e esforço. No modelo por aluno, UF e média de português do município; a escola acrescenta pouco | 7.1, 7.2, 7.7 |
@@ -521,6 +522,8 @@ Como o código da escola é mascarado, o produto é a lista de municípios ([`mu
 
 A UF é uma das duas variáveis mais importantes. O ranking concentra Bahia, Pará e Rio de Janeiro no topo, e um município bem gerido nesses estados herda risco por estar lá. **O score indica onde investigar, não onde punir.** Não deve condicionar repasse de recurso nem avaliar gestor, porque um município não escolhe em que estado está.
 
+O resultado de 2025 mostrou o outro lado do problema: o efeito do estado muda. A Bahia tinha 99% dos municípios em alerta e só 14% falharam, porque a rede estadual melhorou de um ano para o outro. Uma variável de política estadual (seção 11) é o que permitiria ao modelo enxergar essa mudança antes.
+
 ### 9.2 Teto de previsibilidade
 
 A taxa varia com desvio de 16,6 p.p. de um ano para o outro; a meta pede, na mediana, 3,2 p.p. Entre os 18% que só precisavam não piorar, 45% falharam. Nenhum modelo com estas variáveis vai muito além de AUC 0,8. **Um resultado de 95% aqui seria sinal de vazamento.**
@@ -574,6 +577,8 @@ Os microdados não têm sexo, cor, idade, renda, frequência nem avaliação ant
 
 UFs com mais municípios em alerta: Bahia (99%), Pará (97%), Rio de Janeiro (96%), Paraná (86%). Com menos: Ceará (0%), Goiás (0,4%), Espírito Santo (1%), Minas Gerais (13%).
 
+**Como foi de fato (resultado de 2025):** Bahia 14% de falha, Pará 40%, Rio de Janeiro 51%, Paraná 10%; Ceará 20%, Goiás 5%, Espírito Santo 4%, Minas Gerais 19%. A tabela completa por UF está em `por_uf`, em [`validacao_2025.json`](reports/validacao_2025.json).
+
 ### 10.3 Como usar
 
 1. **Começar pelos 617 críticos, mas ordenar também pelo esforço exigido.** Em 2024, 84% dos críticos falharam; em 2025, 30%. A validação mostrou que, num ano de melhora geral, o esforço exigido sozinho ordena melhor que o modelo.
@@ -581,7 +586,7 @@ UFs com mais municípios em alerta: Bahia (99%), Pará (97%), Rio de Janeiro (96
    - Baixa participação → **apoio à gestão primeiro**: cadastro, frequência, comunicação com famílias. Mandar só material pedagógico tende a não surtir efeito.
    - Baixo desempenho com alta participação → **apoio pedagógico**: formação de professores, material estruturado. A gestão já funciona.
    - Alto desempenho → **documentar e espalhar** o que funciona.
-3. **Agir no estado onde o alerta é quase total.** Na Bahia (99%) e no Pará (97%), negociar município a município é ineficiente: o caminho é a secretaria estadual.
+3. **Agir no estado onde o alerta é quase total, mas conferir antes o que o estado está fazendo.** Onde quase todos os municípios estão em alerta, negociar um a um é ineficiente: o caminho é a secretaria estadual. Em 2025, a Bahia (99% em alerta) teve só 14% de falha, porque o programa estadual avançou; o Rio de Janeiro (96%) teve 51%. O modelo não enxerga política estadual, e o gestor enxerga.
 4. **Acompanhar a participação durante o ano.** É conhecida antes do resultado. Rede abaixo de 85% pode ser sinalizada no mesmo ano letivo.
 5. **Olhar dentro dos municípios que bateram a meta.** 542 deles têm escolas abaixo de 40% de alfabetizados. A média do município esconde essas escolas, e só a secretaria consegue localizá-las.
 6. **Levar o acompanhamento para dentro da escola.** Três quartos da diferença entre as crianças estão entre colegas da mesma escola: avaliação diagnóstica e acompanhamento individual são onde a política tem mais espaço.
@@ -647,7 +652,7 @@ A avaliação da Fase 2 apontou quatro problemas na pipeline de dados. Cada um t
 
 **O que para o pipeline e o que só avisa.** Erro de dado (coluna faltando, tipo errado, chave duplicada, microdado que não reproduz o indicador oficial) para a execução. Deriva não para: é um aviso para quem usa o ranking, registrado em `drift.json`.
 
-**Custo (FinOps).** Tudo roda localmente em ~2 a 3 minutos, com ~10 MB de dados: custo de infraestrutura zero, registrado em cada execução (`recursos.custo_estimado_brl`). O GitHub Actions usa a cota gratuita de repositório público. A nuvem não entrou nesta fase porque o volume não justifica: o maior insumo, os microdados por aluno, vira um agregado de 79 mil linhas.
+**Custo (FinOps).** Tudo roda localmente em ~2 a 3 minutos, com ~12 MB de dados: custo de infraestrutura zero, registrado em cada execução (`recursos.custo_estimado_brl`). O GitHub Actions usa a cota gratuita de repositório público. A nuvem não entrou nesta fase porque o volume não justifica: o maior insumo, os microdados por aluno, vira um agregado de 79 mil linhas.
 
 ## Estrutura do repositório
 
@@ -710,7 +715,7 @@ O fluxo está em [`CONTRIBUTING.md`](CONTRIBUTING.md) e vale para qualquer pesso
 
 ## Versionamento
 
-Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`, `fix/contrato-gold`, `fix/descartes-com-regra`, `feat/registro-execucao`, `feat/monitoramento-deriva`, `ci/pipeline-github-actions`, `docs/qualidade-e-monitoramento`, `feat/metas-estaduais`, `feat/resultado-2025`, `docs/validacao-2025`, `fix/portabilidade-e-colaboracao`, `docs/revisao-enunciado`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
+Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`, `fix/contrato-gold`, `fix/descartes-com-regra`, `feat/registro-execucao`, `feat/monitoramento-deriva`, `ci/pipeline-github-actions`, `docs/qualidade-e-monitoramento`, `feat/metas-estaduais`, `feat/resultado-2025`, `docs/validacao-2025`, `fix/portabilidade-e-colaboracao`, `docs/revisao-enunciado`, `fix/validacao-por-uf`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
 
 ## Autor
 

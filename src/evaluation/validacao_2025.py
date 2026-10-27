@@ -16,6 +16,7 @@ O QUE E MEDIDO
 - calibracao: falha prevista em media x falha real
 - robustez: as mesmas contas com o indicador oficial arredondado do INEP
 - UFs: quantas bateram a propria meta de 2025 (fato_meta_uf)
+- por UF: % em alerta x % que de fato nao bateu a meta, e onde estao os criticos
 
 Saidas: reports/validacao_2025.json, images/validacao_2025.png
 
@@ -125,6 +126,14 @@ def main() -> None:
                  .reindex(ORDEM_FAIXAS))
     rs = base[base["sigla_uf"] == "RS"]
     acima = base.groupby("esforco_acima_do_treino")["falhou"].agg(["size", "mean"])
+    por_uf = (base.assign(alerta=base["alerta"].astype(bool))
+              .groupby("sigla_uf")
+              .agg(municipios=("falhou", "size"), pct_alerta=("alerta", "mean"),
+                   falha_real=("falhou", "mean"))
+              .sort_values(["pct_alerta", "municipios"], ascending=False))
+    criticos = (base[base["faixa"] == "critico"].groupby("sigla_uf")
+                .agg(criticos=("falhou", "size"), falha_real=("falhou", "mean"))
+                .sort_values("criticos", ascending=False).head(5))
 
     resultado = {
         **contagem,
@@ -145,6 +154,8 @@ def main() -> None:
             "sim": {"municipios": int(acima.loc[True, "size"]), "falha_real": round(float(acima.loc[True, "mean"]), 4)},
             "nao": {"municipios": int(acima.loc[False, "size"]), "falha_real": round(float(acima.loc[False, "mean"]), 4)},
         },
+        "por_uf": por_uf.round(4).reset_index().to_dict("records"),
+        "criticos_por_uf_top5": criticos.round(4).reset_index().to_dict("records"),
         "robustez_indicador_oficial": robustez_indicador_oficial(base),
         "ufs": resumo_ufs(),
     }

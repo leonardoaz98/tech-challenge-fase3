@@ -75,7 +75,7 @@ Uma linha por município. `base_treino` (2023 → 2024) e `base_previsao` (2024 
 | `log_pib_per_capita` | feature | `log(PIB × 1000 / população)`, IBGE 2021 |
 | `sigla_uf`, `regiao`, `porte_municipio` | feature | Categóricas |
 | `meta_alvo` | fora | Colinear com taxa + esforço |
-| `_taxa_alvo` | fora | Resultado do ano-alvo (auditoria) |
+| `_taxa_alvo` | fora | Resultado do ano-alvo (auditoria). Vazio na `base_previsao`, mesmo com o resultado de 2025 já na Gold |
 | `risco` | **alvo** | 1 se `_taxa_alvo < meta_alvo` |
 | `nome_municipio`, `microrregiao`, `mesorregiao`, `populacao`, `pib_per_capita` | identificação | Não entram no modelo |
 
@@ -128,6 +128,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | 39 | Validar contra uma regra simples | Saber se o modelo ganha de ordenar só pelo esforço exigido | `auc_regra_simples_esforco` em `validacao_2025.json` |
 | 40 | Conferir com o indicador oficial arredondado | A planilha oficial difere do microdado em alguns municípios | `robustez_indicador_oficial` em `validacao_2025.json` |
 | 41 | Manter no ranking publicado o `LimitarFaixa` e o RS sem choque, mesmo desmentidos em 2025 | A validação confere o que foi previsto; trocar agora apagaria a comparação. As correções entram no próximo modelo (seção 11 do README) | Decisões 13 e 14 revistas: fora da faixa do treino a AUC caiu para 0,569; o RS teve 73,6% de falha |
+| 42 | Validação também por UF | O efeito de UF é a maior parte do score; é preciso ver onde ele acertou e onde errou | Bahia: 99% em alerta, 14% de falha; Rio de Janeiro: 96% e 51% (`por_uf` em `validacao_2025.json`) |
 
 ---
 
@@ -226,6 +227,7 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `docs/validacao-2025` | README com a seção 6.6 e as limitações revistas pelo resultado de 2025 |
 | `fix/portabilidade-e-colaboracao` | Caminho de downloads configurável no extrator de microdados; `CONTRIBUTING.md` e modelo de pull request |
 | `docs/revisao-enunciado` | Revisão contra o enunciado: hipóteses explícitas, diagrama completo, gráficos que faltavam, validação de 2025 no notebook 02 |
+| `fix/validacao-por-uf` | Validação de 2025 por UF; o erro da Bahia documentado no README e no notebook 01 |
 
 Cada branch entrou na `main` por pull request.
 
