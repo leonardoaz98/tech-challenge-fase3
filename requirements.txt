@@ -6,6 +6,8 @@ scikit-learn==1.9.1
 matplotlib==3.11.2
 shap==0.52.0
 joblib==1.6.0
+openpyxl==3.1.5        # planilhas de divulgacao do INEP (.xlsx)
+et-xmlfile==2.0.0
 
 # Notebook
 ipykernel==7.4.0

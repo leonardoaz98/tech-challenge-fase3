@@ -21,6 +21,7 @@ contrato_gold.py e e conferido ao gravar e ao ler.
     dim_uf              sigla_uf
     dim_tempo           ano
     dim_nivel           nivel_alfabetizacao (0 a 5)
+    fato_meta_uf        sigla_uf + ano      (Brasil e UFs, rede publica: resultado e meta)
 
 LEITURA
 -------
@@ -33,6 +34,7 @@ Execucao (reconstroi o snapshot local):
     python -m src.preprocessing.gold
 """
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -70,7 +72,16 @@ FAIXAS_NIVEL = [
     (3, "Medio", 60, 70), (4, "Alto", 70, 80), (5, "Muito alto", 80, 101),
 ]
 
-TABELAS = ["fato_alfabetizacao", "dim_municipio", "dim_uf", "dim_tempo", "dim_nivel"]
+TABELAS = ["fato_alfabetizacao", "dim_municipio", "dim_uf", "dim_tempo", "dim_nivel",
+           "fato_meta_uf"]
+
+# Metas pactuadas: publicacao de 2024, a mesma usada para os municipios.
+# A publicacao de 2025 do Brasil arredonda as metas para inteiros.
+ANO_PUBLICACAO_METAS = 2024
+
+# Planilha do INEP com o resultado de 2025 do Brasil e das UFs, como publicada:
+# https://download.inep.gov.br/avaliacao_da_alfabetizacao/resultados/resultados_e_metas_ufs_2025_v2.xlsx
+PLANILHA_UF_2025 = RAW_INEP / "resultados_e_metas_ufs_2025.xlsx"
 
 
 # ---------------------------------------------------------------------
@@ -97,6 +108,54 @@ def _ler_inep(nome: str) -> pd.DataFrame:
     if "id_municipio" in df.columns:
         df["id_municipio"] = df["id_municipio"].str.strip().str.zfill(7)
     return df
+
+
+def ler_planilha_inep(caminho: Path) -> pd.DataFrame:
+    """Planilha de divulgacao do INEP: 1a linha com rotulos, 2a com os nomes
+    tecnicos das colunas, notas de rodape no fim."""
+    df = pd.read_excel(caminho, sheet_name=0, header=1)
+    return df[pd.to_numeric(df["ANO"], errors="coerce").notna()].reset_index(drop=True)
+
+
+def construir_meta_uf() -> pd.DataFrame:
+    """Resultado e meta do Brasil e de cada UF (rede publica), 2023 a 2030."""
+    uf = _ler_inep("meta_alfabetizacao_uf")
+    br = _ler_inep("meta_alfabetizacao_brasil").assign(sigla_uf="BR")
+    pub = pd.concat([uf, br], ignore_index=True)
+
+    # Resultado medido: cada linha de publicacao traz a taxa do proprio ano
+    medidos = pub[["sigla_uf", "ano", "taxa_alfabetizacao", "percentual_participacao"]]
+
+    # 2025 das UFs ainda nao esta na Base dos Dados: vem da planilha do INEP
+    # (inteiros, como o INEP divulga). O Brasil 2025 ja esta no CSV.
+    p = ler_planilha_inep(PLANILHA_UF_2025)
+    novo = pd.DataFrame({
+        "sigla_uf": p["SIGLA_UF"].fillna("BR").astype(str).str.replace("*", "", regex=False).str.strip(),
+        "ano": 2025,
+        "taxa_alfabetizacao": pd.to_numeric(p["PC_ALUNO_ALFABETIZADO_2025"], errors="coerce").astype(float),
+        "percentual_participacao": pd.to_numeric(p["PC_AVALIADOS_LP"], errors="coerce").astype(float),
+    })
+    ja_tem = set(medidos.loc[medidos["ano"] == 2025, "sigla_uf"])
+    medidos = pd.concat([medidos, novo[~novo["sigla_uf"].isin(ja_tem)]], ignore_index=True)
+
+    metas = pub[pub["ano"] == ANO_PUBLICACAO_METAS].melt(
+        id_vars="sigla_uf", value_vars=[f"meta_alfabetizacao_{a}" for a in ANOS_META],
+        var_name="ano", value_name="meta")
+    metas["ano"] = metas["ano"].str[-4:].astype(int)
+
+    fato = (medidos.merge(metas, on=["sigla_uf", "ano"], how="outer")
+            .rename(columns={"taxa_alfabetizacao": "taxa_realizada"}))
+    fato["ano"] = fato["ano"].astype(int)
+    for c in ["taxa_realizada", "percentual_participacao", "meta"]:
+        fato[c] = fato[c].astype(float)
+    fato["gap_meta"] = (fato["taxa_realizada"] - fato["meta"]).round(2)
+    fato["meta_atingida"] = np.where(
+        fato["taxa_realizada"].isna() | fato["meta"].isna(), pd.NA,
+        (fato["taxa_realizada"] >= fato["meta"]).astype(int))
+    fato["meta_atingida"] = fato["meta_atingida"].astype("Int64")
+    colunas = ["sigla_uf", "ano", "taxa_realizada", "percentual_participacao",
+               "meta", "gap_meta", "meta_atingida"]
+    return fato[colunas].sort_values(["sigla_uf", "ano"]).reset_index(drop=True)
 
 
 def classificar_nivel(taxa: pd.Series) -> pd.Series:
@@ -155,7 +214,8 @@ def construir() -> dict:
                               for n, d, a, b in FAIXAS_NIVEL])
 
     return {"fato_alfabetizacao": fato, "dim_municipio": dim_municipio,
-            "dim_uf": dim_uf, "dim_tempo": dim_tempo, "dim_nivel": dim_nivel}
+            "dim_uf": dim_uf, "dim_tempo": dim_tempo, "dim_nivel": dim_nivel,
+            "fato_meta_uf": construir_meta_uf()}
 
 
 def validar(gold: dict) -> None:
@@ -165,6 +225,9 @@ def validar(gold: dict) -> None:
     assert fato["taxa_realizada"].dropna().between(0, 100).all(), "taxa fora de 0-100"
     assert fato["id_municipio"].isin(gold["dim_municipio"]["id_municipio"]).all()
     assert gold["dim_municipio"]["sigla_uf"].notna().all(), "municipio sem UF"
+    uf = gold["fato_meta_uf"]
+    assert set(uf["sigla_uf"]) == set(REGIOES) | {"BR"}, "fato_meta_uf sem todas as UFs e o Brasil"
+    assert uf["taxa_realizada"].dropna().between(0, 100).all(), "taxa de UF fora de 0-100"
 
 
 def main() -> None:

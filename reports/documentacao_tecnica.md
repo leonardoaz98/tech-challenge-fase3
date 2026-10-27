@@ -32,6 +32,18 @@ Complementa o README com o que um revisor técnico precisa para auditar o projet
 | `dim_tempo` | `ano` | `ano`, `tipo` (`medido` ou `so_meta`) |
 | `dim_nivel` | `nivel_alfabetizacao` | `nivel_alfabetizacao`, `descricao`, `faixa` |
 
+**`fato_meta_uf`** — grão `sigla_uf + ano`, 224 linhas (27 UFs + Brasil como `BR`, 2023 a 2030), rede pública
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `sigla_uf` | texto | UF, ou `BR` para o Brasil |
+| `ano` | inteiro | 2023 a 2025 medidos; 2026 a 2030 só meta |
+| `taxa_realizada` | float | % de alfabetizados da rede pública. 2023 e 2024 da Base dos Dados; 2025 da planilha do INEP, que divulga inteiros |
+| `percentual_participacao` | float | % de alunos avaliados |
+| `meta` | float | Meta pactuada (publicação de 2024, a mesma dos municípios) |
+| `gap_meta` | float | `taxa_realizada − meta` |
+| `meta_atingida` | 0/1 | 1 se `taxa_realizada ≥ meta` |
+
 O esquema de todas as tabelas da Gold está em `src/preprocessing/contrato_gold.py`, conferido ao gravar, ao ler e contra este dicionário.
 
 **`fato_escola`** — grão `ano + id_municipio + id_escola + rede`, 79.273 linhas, a partir dos microdados por aluno
@@ -110,6 +122,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | 33 | Registro acumulado, não sobrescrito | Histórico de cada execução (commit, versões, dados, métricas) | `reports/execucoes.jsonl` |
 | 34 | Deriva avisa, não para | Mudança de distribuição é informação para o gestor, não erro de dado | `esforco_exigido` em alerta (PSI 1,26), demais estáveis |
 | 35 | Teste automático compara métricas com tolerância | Máquinas diferentes mudam pixels e última casa decimal, não a conclusão | `referencia_metricas.json` |
+| 36 | Metas do Brasil e das UFs na Gold | O enunciado lista metas nacionais e estaduais; os CSVs estavam no repositório sem uso | `fato_meta_uf`, 28 linhas por ano (2025 das UFs em inteiros, como o INEP divulga) |
 
 ---
 
@@ -117,7 +130,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 
 | Script | Entrada | Saída |
 |---|---|---|
-| `src/preprocessing/gold.py` | `data/raw/inep/*.csv` | `data/gold/*.parquet` (para se fugir do contrato) |
+| `src/preprocessing/gold.py` | `data/raw/inep/*.csv` e `*.xlsx` | `data/gold/*.parquet` (para se fugir do contrato) |
 | `src/preprocessing/contrato_gold.py` | `data/gold/*.parquet` + esta documentação | confere esquema, tipos, chave e dicionário de dados |
 | `src/preprocessing/baixar_dados_ibge.py` | APIs do IBGE | `data/raw/ibge/*.csv` (já versionados) |
 | `src/preprocessing/base_analitica.py` | Gold + IBGE | `data/processed/base_treino.parquet`, `base_previsao.parquet` |
@@ -200,6 +213,7 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `feat/monitoramento-deriva` | PSI por variável entre treino e previsão |
 | `ci/pipeline-github-actions` | Pipeline do zero a cada pull request, com comparação das métricas |
 | `docs/qualidade-e-monitoramento` | README e documentação técnica com qualidade, rastreabilidade e custo |
+| `feat/metas-estaduais` | Metas e resultados do Brasil e das UFs na Gold (`fato_meta_uf`) |
 
 Cada branch entrou na `main` por pull request.
 
