@@ -87,7 +87,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 
 | # | Decisão | Motivo | Evidência |
 |---|---|---|---|
-| 1 | Unidade = município nesta etapa | A Gold da Fase 2 é municipal e a política é decidida por rede; o microdado por aluno (tabela `alunos`, BigQuery) fica para a etapa seguinte | Gold agregada por município × ano |
+| 1 | Unidade de decisão = município (nível 1); aluno no nível 2 | A Gold da Fase 2 é municipal e a política é decidida por rede; o enunciado pede prever a criança, o que os microdados permitem | Gold por município × ano; `fato_escola` com os microdados |
 | 2 | Rede municipal (código 3) | É a rede das metas municipais | Metas existem só para rede municipal |
 | 3 | Treino 2023→2024, previsão 2024→2025 | Separação temporal contra vazamento | Simula o gestor no início do ano |
 | 4 | Alvo = **não** atingiu | Classe de interesse da política | Recall passa a medir "falhas detectadas" |
@@ -110,7 +110,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | 21 | Sem histórico de escola | Código mascarado a cada edição | 2% das escolas de 2024 com o mesmo código em 2023 |
 | 22 | Participação da escola fora do modelo por aluno | Só é conhecida no dia da prova | — |
 | 23 | Teste e validação separados por município no modelo por aluno | Escolas vizinhas no treino inflariam a AUC | 25% dos municípios no teste; `GroupKFold(5)` no treino |
-| 24 | Tetos com o resultado real | Medir quanto ainda cabe melhorar com dados de escola | Teto da escola: AUC 0,736 |
+| 24 | Tetos com o resultado real | Medir quanto ainda cabe melhorar com dados de escola | Teto da escola: AUC 0,741 no teste |
 | 25 | Simular o acaso na dispersão entre escolas | Escola pequena oscila por sorte | Metade das escolas críticas observadas seria acaso |
 | 26 | Lista por município, não por escola | O código é fictício; a secretaria localiza as próprias escolas | `municipios_com_escolas_criticas.csv` |
 | 27 | Busca em grade com AUC ponderada pelo peso dos alunos | Cada linha representa um grupo de alunos; o scorer padrão ignoraria o peso | 12 combinações; validação 0,652, teste 0,663 |
@@ -127,6 +127,7 @@ Cada decisão com o motivo e a evidência que a sustenta.
 | 38 | Resultado de 2025 escondido da base de previsão | O ranking tem de ser o que se saberia no início de 2025 | `base_previsao` idêntica à anterior; ranking idêntico |
 | 39 | Validar contra uma regra simples | Saber se o modelo ganha de ordenar só pelo esforço exigido | `auc_regra_simples_esforco` em `validacao_2025.json` |
 | 40 | Conferir com o indicador oficial arredondado | A planilha oficial difere do microdado em alguns municípios | `robustez_indicador_oficial` em `validacao_2025.json` |
+| 41 | Manter no ranking publicado o `LimitarFaixa` e o RS sem choque, mesmo desmentidos em 2025 | A validação confere o que foi previsto; trocar agora apagaria a comparação. As correções entram no próximo modelo (seção 11 do README) | Decisões 13 e 14 revistas: fora da faixa do treino a AUC caiu para 0,569; o RS teve 73,6% de falha |
 
 ---
 
@@ -161,6 +162,7 @@ Parâmetros compartilhados (anos, semente, proporção de teste, folds, recall m
 | Requisito do enunciado | Onde |
 |---|---|
 | Imputação de faltantes numéricos | `treinar.py` → `SimpleImputer(strategy="median")` |
+| Engenharia de atributos | `base_analitica.py`: esforço exigido (meta − taxa), log da população e do PIB por habitante, porte em faixas |
 | Transformação numérica | `StandardScaler` + `LimitarFaixa`; log em `base_analitica.py` |
 | Transformação categórica / encoding | `OneHotEncoder(handle_unknown="ignore")` |
 | Tratamento de data leakage | Separação temporal; `_taxa_alvo` fora; transformações no Pipeline; limiar e busca só no treino |
@@ -223,6 +225,7 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `feat/resultado-2025` | Resultado de 2025 na Gold e validação real da previsão de 2025 |
 | `docs/validacao-2025` | README com a seção 6.6 e as limitações revistas pelo resultado de 2025 |
 | `fix/portabilidade-e-colaboracao` | Caminho de downloads configurável no extrator de microdados; `CONTRIBUTING.md` e modelo de pull request |
+| `docs/revisao-enunciado` | Revisão contra o enunciado: hipóteses explícitas, diagrama completo, gráficos que faltavam, validação de 2025 no notebook 02 |
 
 Cada branch entrou na `main` por pull request.
 

@@ -40,7 +40,7 @@ O projeto tem **dois níveis**, cada um respondendo uma parte do enunciado:
 | Unidade | Município, rede municipal de ensino |
 | Alvo | `risco = 1` se o município **não** atingiu a meta |
 | Treino | features de **2023** → resultado de **2024** |
-| Previsão | features de **2024** → meta de **2025** |
+| Previsão | features de **2024** → meta de **2025**, conferida com o resultado real de 2025 (6.6) |
 | Métrica principal | AUC (qualidade da fila de prioridade) + recall da classe de risco |
 
 **Nível 2 · Aluno** (seções 3.5, 4.4, 5.3, 6.5, 7.7, 8.5 e 8.6)
@@ -133,19 +133,23 @@ A primeira linha valida a extração inteira: somando os alunos com o peso do IN
 ## 4. Etapas de modelagem
 
 ```
-CSVs INEP ─► gold.py ─► data/gold/ (star schema)
-                          │
-IBGE ─────────────────────┴─► base_analitica.py ─► base_treino / base_previsao
-                                                     │
-                                                     ├─► eda.py ────────► images/eda_*, reports/eda_resumo.json
-                                                     ├─► treinar.py ────► models/modelo.joblib, reports/resultado_modelo.json
-                                                     ├─► interpretar.py ► images/interp_*, reports/interpretabilidade.json
-                                                     └─► aplicacao.py ──► reports/ranking_2025.csv, perfis, UF
+CSVs e planilhas INEP ─► gold.py ─► data/gold/ (fato_alfabetizacao, fato_meta_uf, dimensões)
+                            │        conferida por contrato_gold.py ao gravar e ao ler
+IBGE ───────────────────────┴─► base_analitica.py ─► base_treino / base_previsao  (+ reports/funil.json)
+                                                       │   (o resultado de 2025 fica fora da previsão)
+                                                       ├─► eda.py ────────────► images/eda_*, reports/eda_resumo.json
+                                                       ├─► treinar.py ────────► models/modelo.joblib, reports/resultado_modelo.json
+                                                       ├─► interpretar.py ────► images/interp_*, reports/interpretabilidade.json
+                                                       ├─► aplicacao.py ──────► reports/ranking_2025.csv, perfis, UF
+                                                       ├─► drift.py ──────────► reports/drift.json
+                                                       └─► validacao_2025.py ─► reports/validacao_2025.json (ranking x resultado real)
 
 Microdados INEP ─► microdados_inep.py ─► alunos_por_escola.csv ─► escolas.py ─► data/gold/fato_escola.parquet
                                                                                     │
                                                                                     ├─► desigualdade.py ─► images/escolas_*, municipios_com_escolas_criticas.csv
                                                                                     └─► modelo_aluno.py ─► images/aluno_*, reports/resultado_modelo_aluno.json
+
+run_pipeline.py roda tudo na ordem e registra a execução (logs/, reports/execucoes.jsonl)
 ```
 
 ### 4.1 O que a análise exploratória decidiu
@@ -155,12 +159,24 @@ Microdados INEP ─► microdados_inep.py ─► alunos_por_escola.csv ─► es
 | UF sozinha tem AUC 0,73; taxa e esforço isolados, ~0,51 | UF no modelo; ancoragem estadual vira limitação desde o início |
 | Taxa × média de português: r = 0,93 | Teste de estabilidade da importância em 8 sementes |
 | `meta_alvo` = `taxa + esforço` | Removida |
-| **RS caiu 20 p.p. em 2024; o resto do país subiu 4,8** | Sensibilidade sem RS; ranking 2025 do RS sem o choque |
+| **RS caiu 20 p.p. em 2024; o resto do país subiu 4,8** | Sensibilidade sem RS; ranking 2025 do RS sem o choque (desmentido em 2025, seção 6.6) |
 | Participação: volatilidade igual entre faixas, direção diferente | É gestão, não ruído. Fica no modelo e nos perfis |
 | Ruído ano a ano (16,6 p.p.) ≈ 5× o esforço mediano (3,2 p.p.) | Expectativa de AUC perto de 0,8 |
 | Classes equilibradas (47/53) | Sem rebalanceamento |
 
 ![Risco por UF](images/eda_risco_por_uf.png)
+
+**Hipóteses analíticas e o que os dados disseram**
+
+| # | Hipótese | Resultado | Evidência |
+|---|---|---|---|
+| H1 | Município mais rico ou maior alfabetiza mais | **Refutada** | Correlação PIB × risco: −0,02 entre UFs, 0,01 dentro delas (7.6) |
+| H2 | Participação baixa só deixa o indicador mais ruidoso | **Refutada** | Volatilidade igual em todas as faixas; o que muda é a direção: +0,3 p.p. com participação baixa, +4,2 com alta (8.2) |
+| H3 | Quem teve um ano muito bom tende a cair | **Confirmada** | Correlação de −0,45 entre a taxa e a variação seguinte (7.4) |
+| H4 | O estado pesa mais que as características do município | **Confirmada** | UF sozinha tem AUC 0,73; o modelo inteiro, 0,79 (8.1) |
+| H5 | A queda do RS em 2024 foi passageira | **Refutada em 2025** | 73,6% dos municípios do RS não bateram a meta de 2025 (6.6) |
+| H6 | A escola explica a maior parte da diferença entre as crianças | **Refutada** | 77% da variação está entre alunos da mesma escola (8.5) |
+| H7 | Metas não recalculadas depois de 2024 viram alvos difíceis | **Confirmada em 2025** | Com esforço acima do visto no treino, 48% falharam; nos demais, 17% (6.6) |
 
 ### 4.2 Pipeline e prevenção de vazamento
 
@@ -190,9 +206,10 @@ Quatro barreiras contra vazamento:
 
 | Requisito | Como foi feito |
 |---|---|
+| Engenharia de atributos | `esforco_exigido` (meta − taxa), log da população e do PIB por habitante, porte em faixas de política pública, `LimitarFaixa` |
 | Imputação de faltantes numéricos | `SimpleImputer(strategy="median")` |
 | Transformação de numéricas | log (população, PIB), `LimitarFaixa`, `StandardScaler` |
-| Transformação de categóricas | `OneHotEncoder` em UF, região e porte |
+| Transformação de categóricas (feature encoding) | `OneHotEncoder` em UF, região e porte |
 | Tratamento de data leakage | As quatro barreiras acima |
 | Pré-processamento integrado ao modelo | Um único `Pipeline` do scikit-learn, salvo em `models/modelo.joblib` |
 | Treino e validação | Seções 4.3 e 5 |
@@ -342,6 +359,8 @@ O ranking de 2025 foi feito só com o que se sabia no início de 2025. O INEP pu
 
 **O que acertou.** A faixa baixa: previsto 17%, real 17%. A ordem baixo < moderado < alto se manteve. O Brasil bateu a meta (66% contra 63,8%), e 19 de 26 UFs com meta também; ficaram abaixo AM, PA, RJ, RN, RS, SC e SP.
 
+**Por que a regra simples funcionou agora e não antes.** Em 2024, o esforço exigido sozinho não separava nada (AUC 0,51, seção 4.1): as metas estavam perto da taxa e o ruído do indicador dominava. Em 2025, com as metas não recalculadas, o esforço passou a variar 2,5 vezes mais (desvio de 5,9 para 14,8 p.p., a deriva da seção 9.3) e virou a variável decisiva.
+
 **Robustez.** Com o indicador oficial arredondado da planilha do INEP, que difere do microdado em alguns municípios, a conclusão não muda: 26,5% de falha, AUC 0,684 do modelo e 0,749 da regra simples. As duas fontes concordam em 98,7% dos casos.
 
 ## 7. Interpretação dos resultados
@@ -362,6 +381,8 @@ O ranking de 2025 foi feito só com o que se sabia no início de 2025. O INEP pu
 
 O ranking é estável: as posições variam no máximo uma casa entre sementes. Taxa e UF se revezam no topo.
 
+![Importância por permutação](images/interp_permutacao.png)
+
 ### 7.2 SHAP
 
 ![SHAP resumo](images/interp_shap_resumo.png)
@@ -379,6 +400,8 @@ Cada ponto é um município do teste. À direita do zero, a variável empurra pa
 | UF Ceará | −2,22 | Referência nacional em alfabetização |
 | UF Bahia | +1,96 | Maior risco depois de controlar o resto |
 | UF Rio Grande do Sul | +1,74 | Choque das enchentes de 2024 |
+
+![Coeficientes da regressão logística](images/interp_coeficientes.png)
 
 ### 7.4 Regressão à média
 
@@ -473,10 +496,10 @@ A variação de proficiência entre os 2,1 milhões de alunos de 2024 se divide 
 
 | Onde está a diferença | % |
 |---|---|
-| Entre estados | 9 |
-| Entre municípios da mesma UF | 6 |
-| Entre escolas do mesmo município | 7 |
-| **Entre alunos da mesma escola** | **77** |
+| Entre estados | 9,4 |
+| Entre municípios da mesma UF | 6,5 |
+| Entre escolas do mesmo município | 7,3 |
+| **Entre alunos da mesma escola** | **76,7** |
 
 O ruído de amostra das escolas pequenas foi descontado. Com o indicador alfabetizado (0/1) no lugar da proficiência, o quadro é o mesmo (85% dentro da escola).
 
@@ -634,9 +657,9 @@ Segue a estrutura mínima do enunciado:
 📁 tech-challenge-fase3
 │
 ├── 📁 data
-│   ├── raw/inep/              CSVs públicos do INEP e agregado dos microdados por escola
+│   ├── raw/inep/              CSVs da Base dos Dados, resultado de 2025 e planilhas do INEP, agregado dos microdados por escola
 │   ├── raw/ibge/              localidades, população e PIB
-│   ├── gold/                  star schema da Fase 2 (snapshot) + fato_escola
+│   ├── gold/                  star schema da Fase 2 (snapshot) + fato_meta_uf + fato_escola
 │   └── processed/             bases de treino e previsão (gerado, fora do git)
 ├── 📁 notebooks
 │   ├── 01_analise_exploratoria.ipynb
@@ -668,7 +691,7 @@ Segue a estrutura mínima do enunciado:
 |---|---|
 | Repositório Git completo | este repositório |
 | Código-fonte organizado | `src/` em preprocessing, modeling, evaluation, visualization |
-| Notebooks ou scripts | `notebooks/` (3, executados) e `src/` |
+| Notebooks ou scripts | `notebooks/` (3, executados; o 02 inclui a validação real de 2025) e `src/` |
 | README detalhado | este arquivo, com as 11 seções pedidas |
 | Documentação técnica | [`reports/documentacao_tecnica.md`](reports/documentacao_tecnica.md) |
 | Vídeo executivo | _link após a gravação_ |
@@ -687,7 +710,7 @@ O fluxo está em [`CONTRIBUTING.md`](CONTRIBUTING.md) e vale para qualquer pesso
 
 ## Versionamento
 
-Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`, `fix/contrato-gold`, `fix/descartes-com-regra`, `feat/registro-execucao`, `feat/monitoramento-deriva`, `ci/pipeline-github-actions`, `docs/qualidade-e-monitoramento`, `feat/metas-estaduais`, `feat/resultado-2025`, `docs/validacao-2025`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
+Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`, `fix/contrato-gold`, `fix/descartes-com-regra`, `feat/registro-execucao`, `feat/monitoramento-deriva`, `ci/pipeline-github-actions`, `docs/qualidade-e-monitoramento`, `feat/metas-estaduais`, `feat/resultado-2025`, `docs/validacao-2025`, `fix/portabilidade-e-colaboracao`, `docs/revisao-enunciado`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
 
 ## Autor
 
@@ -698,7 +721,8 @@ Construído a partir do Tech Challenge da Fase 3 da pós em IA (FIAP Pós Tech, 
 ## Fontes
 
 - INEP. Indicador Criança Alfabetizada e metas municipais, via [Base dos Dados](https://basedosdados.org/dataset/br-inep-avaliacao-alfabetizacao)
-- INEP. [Microdados da Avaliação da Alfabetização](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados) (2023 e 2024)
+- INEP. [Microdados da Avaliação da Alfabetização](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados) (2023 e 2024; de 2025, só o `TS_MUNICIPIO`)
+- INEP. [Resultados do Indicador Criança Alfabetizada 2025](https://www.gov.br/inep/pt-br/areas-de-atuacao/avaliacao-e-exames-educacionais/avaliacao-da-alfabetizacao/resultados): planilhas de municípios, UFs e Brasil
 - IBGE. [API de Localidades](https://servicodados.ibge.gov.br/api/docs/localidades) e [SIDRA](https://sidra.ibge.gov.br) (agregados 6579 e 5938)
 - Queda do RS em 2024 atribuída às enchentes pelo MEC: [Lex Legal, 12/07/2025](https://lexlegal.com.br/?p=27209)
 
