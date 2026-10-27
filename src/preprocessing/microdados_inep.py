@@ -26,6 +26,7 @@ Execucao:
     python -m src.preprocessing.microdados_inep
 """
 import json
+import os
 import sys
 import urllib.request
 import zipfile
@@ -39,7 +40,10 @@ from src.config import RAW_INEP, REPORTS
 ANOS = [2023, 2024]
 URL = "https://download.inep.gov.br/dados_abertos/microdados_avaliacao_da_alfabetizacao_{ano}.zip"
 PASTA_ZIP = RAW_INEP / "microdados"
-DOWNLOADS = Path("/mnt/c/Users/Cliente/Downloads")
+# Pasta onde o navegador salvou os zips (o site do INEP as vezes recusa
+# download por script). Padrao: ~/Downloads. No WSL, apontar para a pasta
+# do Windows: PASTA_DOWNLOADS=/mnt/c/Users/<usuario>/Downloads
+DOWNLOADS = Path(os.getenv("PASTA_DOWNLOADS", str(Path.home() / "Downloads")))
 CORTE = 743  # ponto de corte da escala Saeb para "alfabetizado"
 
 COLUNAS = {
