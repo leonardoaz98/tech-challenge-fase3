@@ -8,6 +8,7 @@ Projeto de portfólio construído a partir do Tech Challenge da Fase 3 da pós e
 - **Município:** regressão logística com AUC de 0,80 no teste, calibrada para detectar 81% dos municípios que falham. Ranking de 2025 com 5.352 municípios, 617 em risco crítico.
 - **Aluno:** AUC de 0,663 por criança, em municípios nunca vistos no treino: ~68% do caminho até o máximo possível com dados de escola. 77% da diferença entre as crianças está dentro da mesma escola.
 - **Escolas:** ~770 escolas críticas reais (abaixo de 40%) escondidas em municípios que bateram a meta de 2024.
+- **Validação real:** o resultado de 2025 saiu e a previsão foi conferida. AUC de 0,68 num ano que o modelo nunca viu, abaixo dos 0,80 do teste e abaixo de uma regra simples (0,745). O país melhorou 9,5 p.p. em um ano e o modelo, treinado num ano ruim, superestimou o risco. Detalhes na seção 6.6.
 
 | | |
 |---|---|
@@ -15,6 +16,7 @@ Projeto de portfólio construído a partir do Tech Challenge da Fase 3 da pós e
 | Documentação técnica | [`reports/documentacao_tecnica.md`](reports/documentacao_tecnica.md) |
 | Notebooks | [01 · Análise exploratória](notebooks/01_analise_exploratoria.ipynb) · [02 · Modelagem e resultados](notebooks/02_modelagem_e_resultados.ipynb) · [03 · Escolas e modelo por aluno](notebooks/03_escolas_e_modelo_aluno.ipynb) |
 | Ranking 2025 | [`reports/ranking_2025.csv`](reports/ranking_2025.csv) |
+| Ranking 2025 x resultado real | [`reports/validacao_2025.json`](reports/validacao_2025.json) |
 | Municípios com escolas críticas | [`reports/municipios_com_escolas_criticas.csv`](reports/municipios_com_escolas_criticas.csv) |
 
 ---
@@ -66,17 +68,20 @@ O projeto tem **dois níveis**, cada um respondendo uma parte do enunciado:
 | IBGE SIDRA 6579 | População estimada (2021) | `data/raw/ibge/ibge_populacao.csv` |
 | IBGE SIDRA 5938 | PIB municipal (2021) | `data/raw/ibge/ibge_pib.csv` |
 | INEP · microdados da Avaliação da Alfabetização (2023 e 2024) | Um registro por aluno: escola, rede, presença, proficiência, peso | `data/raw/inep/alunos_por_escola.csv` (agregado por escola) |
+| INEP · resultado de 2025 por município (`TS_MUNICIPIO`, dos microdados de 2025) | Taxa de 2025 com casas decimais e média em português. Mesmo arquivo que a Base dos Dados publica para 2023 e 2024 | `data/raw/inep/TS_MUNICIPIO_2025.csv` |
+| INEP · planilhas de divulgação 2025 (municípios e UFs) | Indicador oficial, participação de 2025, resultado e metas do Brasil e das UFs | `data/raw/inep/resultados_e_metas_*_2025.xlsx` |
 
 ### 3.2 Gold: reconstruída localmente, com contrato
 
 Na Fase 2 a Gold é um star schema no S3, consultado via Athena. Para o projeto rodar em qualquer máquina, [`src/preprocessing/gold.py`](src/preprocessing/gold.py) reconstrói a Gold a partir dos CSVs públicos do INEP e grava um snapshot em `data/gold/`:
 
 ```
-fato_alfabetizacao   id_municipio + ano   43.008 linhas (2023-2024 medidos, 2025-2030 só meta)
+fato_alfabetizacao   id_municipio + ano   43.008 linhas (2023-2025 medidos, 2026-2030 só meta)
+fato_meta_uf         sigla_uf + ano          224 linhas (27 UFs + Brasil, resultado e meta 2023-2030)
 dim_municipio        5.500   ·   dim_uf  25   ·   dim_tempo  8   ·   dim_nivel  6
 ```
 
-As 43.008 linhas batem com o documentado na Fase 2. O esquema é o que **as views do Athena e o dashboard da Fase 2 leem** (`taxa_realizada`, `meta`, `gap_meta`, `meta_atingida`), e não os nomes que o `build_gold.py` da Fase 2 grava (`taxa_alfabetizacao`); essa diferença quebrava as views na Fase 2.
+As 43.008 linhas batem com o documentado na Fase 2. O resultado de 2025, publicado depois da Fase 2, preenche as linhas de 2025 que antes só tinham meta. O esquema é o que **as views do Athena e o dashboard da Fase 2 leem** (`taxa_realizada`, `meta`, `gap_meta`, `meta_atingida`), e não os nomes que o `build_gold.py` da Fase 2 grava (`taxa_alfabetizacao`); essa diferença quebrava as views na Fase 2.
 
 Para não repetir: o esquema de cada tabela está escrito uma vez em [`contrato_gold.py`](src/preprocessing/contrato_gold.py) e é conferido **ao gravar, ao ler e contra a documentação técnica**. Coluna faltando, coluna a mais, tipo errado ou chave duplicada param o pipeline. A leitura direta do S3 foi retirada: sem acesso ao bucket não havia como testá-la.
 
@@ -313,6 +318,32 @@ Para saber se 0,663 é pouco ou muito, o modelo é comparado, **no mesmo teste**
 
 O segundo é o máximo que **qualquer** modelo com variáveis de escola alcançaria. O modelo percorre **68% do caminho** entre o acaso (0,5) e esse teto. O resto da distância até 1,0 está em informação da criança que os dados abertos não têm.
 
+### 6.6 A previsão de 2025 contra o resultado real
+
+O ranking de 2025 foi feito só com o que se sabia no início de 2025. O INEP publicou o resultado municipal de 2025 depois, e ele entrou na Gold. A base de previsão continua sem enxergá-lo: o ranking é o mesmo de antes, e a conferência fica em [`validacao_2025.py`](src/evaluation/validacao_2025.py).
+
+| | Teste (2024) | **Real (2025)** |
+|---|---|---|
+| Municípios | 1.308 | 5.335 com resultado |
+| Não atingiram a meta | 46,7% | **27,8%** (o modelo previa 43,7% em média) |
+| AUC do modelo completo | 0,799 | **0,68** |
+| AUC da probabilidade recomendada (RS sem o choque) | — | 0,60 |
+| AUC de uma regra simples: ordenar só pelo esforço exigido | — | **0,745** |
+| Alerta: recall / precisão | 81% / 64% | 64% / 34% |
+
+![Previsão de 2025 x resultado real](images/validacao_2025.png)
+
+**O que aconteceu.** A taxa média dos municípios subiu de 62,8% para 72,3% em um ano, e só 27,8% não bateram a meta, contra 46,7% no ano do treino. O modelo aprendeu num ano ruim e superestimou o risco em todas as faixas, menos na mais baixa.
+
+**Onde o modelo errou, e por quê:**
+- **A faixa crítica não separou.** Só 30% dos críticos falharam, menos que na faixa alta (35%). Os críticos eram os de taxa mais baixa (54% em 2024), e foram os que mais subiram (+13,9 p.p.). A regressão à média que o modelo aprendeu (seção 7.4) veio mais forte do que em 2024.
+- **O corte do esforço exigido custou caro.** Dentro da faixa vista no treino, modelo e regra simples empatam (AUC 0,666). Fora dela, nos 1.908 municípios com esforço acima de 7,2 p.p., o modelo cai para 0,569 e a regra fica em 0,615. O `LimitarFaixa` evitou extrapolar, mas tratou como iguais municípios que precisavam subir 8 e 20 p.p. Entre eles, 48% falharam; entre os demais, 17%.
+- **A hipótese do RS estava errada.** O ranking avaliou o RS sem o choque das enchentes, apostando na recuperação. O RS não se recuperou: 73,6% dos municípios falharam. O modelo completo previa 77% em média, e o ajuste baixou para 33%. Por isso a probabilidade recomendada saiu pior que o modelo completo.
+
+**O que acertou.** A faixa baixa: previsto 17%, real 17%. A ordem baixo < moderado < alto se manteve. O Brasil bateu a meta (66% contra 63,8%), e 19 de 26 UFs com meta também; ficaram abaixo AM, PA, RJ, RN, RS, SC e SP.
+
+**Robustez.** Com o indicador oficial arredondado da planilha do INEP, que difere do microdado em alguns municípios, a conclusão não muda: 26,5% de falha, AUC 0,684 do modelo e 0,749 da regra simples. As duas fontes concordam em 98,7% dos casos.
+
 ## 7. Interpretação dos resultados
 
 ### 7.1 Importância por permutação (queda de AUC no teste)
@@ -395,7 +426,7 @@ Cada ponto é uma escola do teste; à direita do zero, a variável aumenta a cha
 | Quais fatores mais impactam a alfabetização? | UF (efeito institucional, não econômico), regressão à média da taxa, esforço exigido e participação. Riqueza e porte quase não pesam. No nível da criança, 77% da diferença está dentro da mesma escola | 7.1, 7.3, 7.6, 8.5 |
 | Quais municípios apresentam maior risco educacional? | 617 em risco crítico para 2025, concentrados na Bahia, Pará e Rio de Janeiro. Além deles, 542 municípios que bateram a meta têm escolas críticas escondidas pela média | 10.2, 8.6 |
 | Quais regiões possuem padrões semelhantes? | 4 perfis (KMeans); o que mais separa é a participação: 59% de falha com participação baixa x 38% com alta | 8.3, `perfis.csv` |
-| Como prever municípios que podem não atingir metas futuras? | Modelo treinado em 2023→2024 aplicado a 2024→2025, com limiar que detecta 81% das falhas | 6, 10.2 |
+| Como prever municípios que podem não atingir metas futuras? | Modelo treinado em 2023→2024 aplicado a 2024→2025, com limiar que detecta 81% das falhas no teste. Conferido com o resultado real de 2025: AUC 0,68, abaixo de uma regra simples (0,745), porque 2025 foi um ano de melhora geral | 6, 6.6, 10.2 |
 | Quais variáveis possuem maior influência nos modelos? | Taxa atual e UF se revezam no 1º lugar nas 8 sementes; depois média de português e esforço. No modelo por aluno, UF e média de português do município; a escola acrescenta pouco | 7.1, 7.2, 7.7 |
 
 ### 8.1 O estado pesa mais que o município
@@ -431,6 +462,8 @@ O KMeans não vê o alvo, e mesmo assim os grupos têm taxas de falha bem difere
 O RS caiu, em média, 20 p.p. de 2023 para 2024, enquanto o resto do país subiu 4,8. As enchentes de abril e maio de 2024 fecharam escolas por semanas; o MEC atribuiu a elas a queda do indicador nacional (o RS foi de 63,4% para 44,7%) e estimou que, sem isso, o Brasil teria batido a meta de 60%.
 
 Treinado com esse ano, o modelo aprende "RS = risco". Sem o RS, a AUC cai de 0,78 para 0,75 na validação: parte do sinal era o choque. **Por isso o ranking de 2025 avalia o RS com um modelo que não aprendeu o choque**: o alerta no estado cai de 96% para 38% dos municípios.
+
+**O resultado de 2025 desmentiu essa hipótese:** 73,6% dos municípios do RS não bateram a meta. O modelo completo, que manteve o choque, estava mais perto (seção 6.6). O efeito das enchentes durou mais de um ano.
 
 ### 8.5 A diferença entre as crianças está dentro da escola
 
@@ -471,11 +504,11 @@ A taxa varia com desvio de 16,6 p.p. de um ano para o outro; a meta pede, na med
 
 ### 9.3 Mudança de distribuição em 2025
 
-As metas de 2025 seguem a trajetória original e **não foram recalculadas** depois do resultado de 2024. Quem caiu em 2024 agora precisa subir muito: **36% dos municípios têm esforço exigido acima do maior valor visto no treino** (7,2 p.p.). O `LimitarFaixa` impede extrapolação, mas o modelo nunca viu esse cenário. O ranking marca esses casos na coluna `esforco_acima_do_treino`. O monitoramento de deriva ([`reports/drift.json`](reports/drift.json)) mede isso a cada execução: `esforco_exigido` é a única variável em alerta (PSI 1,26; acima de 0,25 é alerta); todas as outras estão estáveis.
+As metas de 2025 seguem a trajetória original e **não foram recalculadas** depois do resultado de 2024. Quem caiu em 2024 agora precisa subir muito: **36% dos municípios têm esforço exigido acima do maior valor visto no treino** (7,2 p.p.). O `LimitarFaixa` impede extrapolação, mas o modelo nunca viu esse cenário. O ranking marca esses casos na coluna `esforco_acima_do_treino`. O monitoramento de deriva ([`reports/drift.json`](reports/drift.json)) mede isso a cada execução: `esforco_exigido` é a única variável em alerta (PSI 1,26; acima de 0,25 é alerta); todas as outras estão estáveis. **Em 2025 o alerta se confirmou:** fora da faixa do treino, a AUC do modelo caiu para 0,569 (seção 6.6).
 
 ### 9.4 Uma única transição
 
-Treino em 2023→2024, uma única vez. Não há como separar o que é estrutural do que é daquele par de anos (o RS mostra o risco). A validação de verdade será comparar o ranking de 2025 com o resultado municipal de 2025.
+Treino em 2023→2024, uma única vez. A validação com o resultado de 2025 (seção 6.6) mostrou o custo disso: o modelo aprendeu um ano ruim e errou o nível de risco de um ano bom. Agora há duas transições medidas (2023→2024 e 2024→2025); retreinar com as duas é a primeira evolução da seção 11.
 
 ### 9.5 Cobertura
 
@@ -520,7 +553,7 @@ UFs com mais municípios em alerta: Bahia (99%), Pará (97%), Rio de Janeiro (96
 
 ### 10.3 Como usar
 
-1. **Começar pelos 617 críticos.** Em 2024, 84% dos municípios nessa faixa falharam.
+1. **Começar pelos 617 críticos, mas ordenar também pelo esforço exigido.** Em 2024, 84% dos críticos falharam; em 2025, 30%. A validação mostrou que, num ano de melhora geral, o esforço exigido sozinho ordena melhor que o modelo.
 2. **Escolher o tipo de apoio pelo perfil.**
    - Baixa participação → **apoio à gestão primeiro**: cadastro, frequência, comunicação com famílias. Mandar só material pedagógico tende a não surtir efeito.
    - Baixo desempenho com alta participação → **apoio pedagógico**: formação de professores, material estruturado. A gestão já funciona.
@@ -543,8 +576,9 @@ UFs com mais municípios em alerta: Bahia (99%), Pará (97%), Rio de Janeiro (96
 **Dados**
 - **Dados da criança com as redes:** frequência, avaliação diagnóstica de início de ano e histórico escolar, para o modelo por aluno ir além do teto da seção 6.5
 - **Código de escola estável:** com acesso controlado ao código real (sala segura do INEP), usar o resultado da escola no ano anterior
-- Validar o ranking de 2025 contra o resultado municipal de 2025 assim que for publicado
-- Série maior (2025→2026) para validação temporal real: treinar num par de anos, testar no seguinte
+- **Retreinar com as duas transições** (2023→2024 e 2024→2025) e validar no seguinte (2025→2026), para o modelo ver um ano ruim e um ano bom
+- **Trocar o corte do esforço exigido** por uma variável de excesso (quanto passou do máximo do treino), e comparar sempre com a regra simples da seção 6.6
+- Microdados por aluno de 2025 (já publicados pelo INEP) no modelo por aluno
 - Variáveis de política estadual (programa de alfabetização, regime de colaboração), para transformar o "efeito Ceará" em algo acionável
 - Censo 2022 por município: renda, escolaridade materna, desigualdade
 
@@ -611,7 +645,7 @@ Segue a estrutura mínima do enunciado:
 ├── 📁 src
 │   ├── preprocessing          gold.py · contrato_gold.py · base_analitica.py · funil.py · baixar_dados_ibge.py · microdados_inep.py · escolas.py
 │   ├── modeling               treinar.py · transformadores.py · modelo_aluno.py
-│   ├── evaluation             interpretar.py · aplicacao.py · drift.py
+│   ├── evaluation             interpretar.py · aplicacao.py · drift.py · validacao_2025.py
 │   ├── visualization          eda.py · estilo.py · desigualdade.py
 │   ├── config.py              anos, caminhos, semente, limiar
 │   ├── logger.py              logger padronizado (terminal + arquivo)
@@ -638,11 +672,11 @@ Segue a estrutura mínima do enunciado:
 | Documentação técnica | [`reports/documentacao_tecnica.md`](reports/documentacao_tecnica.md) |
 | Vídeo executivo | _link após a gravação_ |
 | Pipeline reproduzível | `python -m src.run_pipeline`, conferido do zero pelo GitHub Actions a cada pull request |
-| Análises e visualizações | `images/` (19 gráficos) e `reports/` |
+| Análises e visualizações | `images/` (20 gráficos) e `reports/` |
 
 ## Versionamento
 
-Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`, `fix/contrato-gold`, `fix/descartes-com-regra`, `feat/registro-execucao`, `feat/monitoramento-deriva`, `ci/pipeline-github-actions`, `docs/qualidade-e-monitoramento`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
+Uma branch por etapa (`feat/base-dados`, `feat/eda`, `feat/modelagem`, `feat/interpretabilidade`, `feat/previsao-2025`, `docs/readme`, `feat/microdados-alunos`, `feat/desigualdade-escolas`, `feat/modelo-aluno`, `docs/readme-aluno`, `fix/modelo-aluno-teste-e-busca`, `refactor/download-ibge`, `fix/contrato-gold`, `fix/descartes-com-regra`, `feat/registro-execucao`, `feat/monitoramento-deriva`, `ci/pipeline-github-actions`, `docs/qualidade-e-monitoramento`, `feat/metas-estaduais`, `feat/resultado-2025`, `docs/validacao-2025`), cada uma entrando na `main` por pull request. Commits no padrão `tipo: descrição`, com o porquê no corpo. As decisões analíticas estão registradas na [documentação técnica](reports/documentacao_tecnica.md#2-registro-de-decisões-analíticas).
 
 ## Autor
 
