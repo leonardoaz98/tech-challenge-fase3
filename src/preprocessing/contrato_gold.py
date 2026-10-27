@@ -59,6 +59,14 @@ CONTRATO = {
         "colunas": {"nivel_alfabetizacao": "inteiro", "descricao": "texto",
                     "faixa": "texto"},
     },
+    "fato_meta_uf": {
+        "chave": ["sigla_uf", "ano"],
+        "colunas": {
+            "sigla_uf": "texto", "ano": "inteiro", "taxa_realizada": "decimal",
+            "percentual_participacao": "decimal", "meta": "decimal",
+            "gap_meta": "decimal", "meta_atingida": "inteiro",
+        },
+    },
     "fato_escola": {
         "chave": ["ano", "id_municipio", "id_escola", "rede"],
         "colunas": {

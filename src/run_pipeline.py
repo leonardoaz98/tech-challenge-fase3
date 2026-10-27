@@ -80,7 +80,8 @@ def git(*args: str) -> str | None:
 
 def hash_entradas() -> dict:
     """sha256 (12 primeiros caracteres) de cada dado bruto que alimenta o pipeline."""
-    arquivos = sorted((RAIZ / "data" / "raw").glob("*/*.csv"))
+    arquivos = sorted(a for a in (RAIZ / "data" / "raw").glob("*/*")
+                      if a.suffix in {".csv", ".xlsx"})
     return {str(a.relative_to(RAIZ)): hashlib.sha256(a.read_bytes()).hexdigest()[:12]
             for a in arquivos}
 
