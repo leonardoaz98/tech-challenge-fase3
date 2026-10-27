@@ -166,6 +166,7 @@ Parâmetros compartilhados (anos, semente, proporção de teste, folds, recall m
 | Tratamento de data leakage | Separação temporal; `_taxa_alvo` fora; transformações no Pipeline; limiar e busca só no treino |
 | Pré-processamento integrado ao modelo | `Pipeline([("prep", ColumnTransformer), ("modelo", ...)])` |
 | Treino, validação e teste | 75/25 estratificado + `StratifiedKFold(5)` no treino |
+| Generalização no tempo | `validacao_2025.py`: ranking de 2025 contra o resultado real de 2025, com regra simples e indicador oficial como comparação |
 | Otimização | `GridSearchCV` (23 combinações × 5 folds) no municipal; busca em grade ponderada (12 × 5) no modelo por aluno |
 | Redução de overfitting | Regularização na grade; gap CV × teste dentro do desvio |
 | Replicabilidade | Semente 42 em tudo; versões fixas; dados versionados; teste de 8 sementes; GitHub Actions a cada pull request |
@@ -220,6 +221,7 @@ Uma branch por etapa, mergeada na `main` com `--no-ff` para o histórico mostrar
 | `docs/qualidade-e-monitoramento` | README e documentação técnica com qualidade, rastreabilidade e custo |
 | `feat/metas-estaduais` | Metas e resultados do Brasil e das UFs na Gold (`fato_meta_uf`) |
 | `feat/resultado-2025` | Resultado de 2025 na Gold e validação real da previsão de 2025 |
+| `docs/validacao-2025` | README com a seção 6.6 e as limitações revistas pelo resultado de 2025 |
 
 Cada branch entrou na `main` por pull request.
 
