@@ -54,6 +54,185 @@
       "falha_real": 0.1657
     }
   },
+  "por_uf": [
+    {
+      "sigla_uf": "BA",
+      "municipios": 398,
+      "pct_alerta": 0.9874,
+      "falha_real": 0.1382
+    },
+    {
+      "sigla_uf": "PA",
+      "municipios": 142,
+      "pct_alerta": 0.9718,
+      "falha_real": 0.4014
+    },
+    {
+      "sigla_uf": "RJ",
+      "municipios": 92,
+      "pct_alerta": 0.9565,
+      "falha_real": 0.5109
+    },
+    {
+      "sigla_uf": "PR",
+      "municipios": 398,
+      "pct_alerta": 0.8643,
+      "falha_real": 0.1005
+    },
+    {
+      "sigla_uf": "AC",
+      "municipios": 22,
+      "pct_alerta": 0.8636,
+      "falha_real": 0.0
+    },
+    {
+      "sigla_uf": "RO",
+      "municipios": 52,
+      "pct_alerta": 0.8462,
+      "falha_real": 0.0962
+    },
+    {
+      "sigla_uf": "AM",
+      "municipios": 55,
+      "pct_alerta": 0.8364,
+      "falha_real": 0.5455
+    },
+    {
+      "sigla_uf": "AP",
+      "municipios": 16,
+      "pct_alerta": 0.75,
+      "falha_real": 0.3125
+    },
+    {
+      "sigla_uf": "MA",
+      "municipios": 217,
+      "pct_alerta": 0.7189,
+      "falha_real": 0.2903
+    },
+    {
+      "sigla_uf": "SP",
+      "municipios": 625,
+      "pct_alerta": 0.7088,
+      "falha_real": 0.4432
+    },
+    {
+      "sigla_uf": "SC",
+      "municipios": 253,
+      "pct_alerta": 0.6364,
+      "falha_real": 0.4032
+    },
+    {
+      "sigla_uf": "RN",
+      "municipios": 151,
+      "pct_alerta": 0.6291,
+      "falha_real": 0.3841
+    },
+    {
+      "sigla_uf": "SE",
+      "municipios": 75,
+      "pct_alerta": 0.6267,
+      "falha_real": 0.2933
+    },
+    {
+      "sigla_uf": "AL",
+      "municipios": 102,
+      "pct_alerta": 0.5784,
+      "falha_real": 0.049
+    },
+    {
+      "sigla_uf": "PB",
+      "municipios": 218,
+      "pct_alerta": 0.5183,
+      "falha_real": 0.2064
+    },
+    {
+      "sigla_uf": "TO",
+      "municipios": 138,
+      "pct_alerta": 0.471,
+      "falha_real": 0.2174
+    },
+    {
+      "sigla_uf": "PE",
+      "municipios": 184,
+      "pct_alerta": 0.4565,
+      "falha_real": 0.3098
+    },
+    {
+      "sigla_uf": "MS",
+      "municipios": 79,
+      "pct_alerta": 0.443,
+      "falha_real": 0.2152
+    },
+    {
+      "sigla_uf": "PI",
+      "municipios": 224,
+      "pct_alerta": 0.442,
+      "falha_real": 0.1473
+    },
+    {
+      "sigla_uf": "MT",
+      "municipios": 140,
+      "pct_alerta": 0.3929,
+      "falha_real": 0.0714
+    },
+    {
+      "sigla_uf": "RS",
+      "municipios": 432,
+      "pct_alerta": 0.3819,
+      "falha_real": 0.7361
+    },
+    {
+      "sigla_uf": "MG",
+      "municipios": 815,
+      "pct_alerta": 0.1276,
+      "falha_real": 0.189
+    },
+    {
+      "sigla_uf": "ES",
+      "municipios": 78,
+      "pct_alerta": 0.0128,
+      "falha_real": 0.0385
+    },
+    {
+      "sigla_uf": "GO",
+      "municipios": 245,
+      "pct_alerta": 0.0041,
+      "falha_real": 0.0531
+    },
+    {
+      "sigla_uf": "CE",
+      "municipios": 184,
+      "pct_alerta": 0.0,
+      "falha_real": 0.2011
+    }
+  ],
+  "criticos_por_uf_top5": [
+    {
+      "sigla_uf": "BA",
+      "criticos": 269,
+      "falha_real": 0.1413
+    },
+    {
+      "sigla_uf": "PA",
+      "criticos": 58,
+      "falha_real": 0.5
+    },
+    {
+      "sigla_uf": "MA",
+      "criticos": 49,
+      "falha_real": 0.4082
+    },
+    {
+      "sigla_uf": "PR",
+      "criticos": 43,
+      "falha_real": 0.1395
+    },
+    {
+      "sigla_uf": "RJ",
+      "criticos": 35,
+      "falha_real": 0.5429
+    }
+  ],
   "robustez_indicador_oficial": {
     "municipios": 5320,
     "taxa_falha_real": 0.2647,
